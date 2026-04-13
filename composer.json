@@ -1,0 +1,39 @@
+{
+    "name": "clickandmortar/openrouter-php-client",
+    "description": "PHP SDK for OpenRouter with typed request/response value objects, SSE streaming, and PSR-18 HTTP transport.",
+    "keywords": ["openrouter", "php", "sdk", "client", "api"],
+    "license": "MIT",
+    "require": {
+        "php": "^8.2.0",
+        "php-http/discovery": "^1.20",
+        "psr/http-client": "^1.0",
+        "psr/http-client-implementation": "^1.0",
+        "psr/http-factory-implementation": "^1.0",
+        "psr/http-message": "^1.1|^2.0",
+        "psr/log": "^3.0"
+    },
+    "require-dev": {
+        "guzzlehttp/guzzle": "^7.10",
+        "guzzlehttp/psr7": "^2.8",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "OpenRouter\\": "src/"
+        },
+        "files": [
+            "src/OpenRouter.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "OpenRouter\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
+}
