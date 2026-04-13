@@ -1,11 +1,11 @@
-# clickandmortar/openrouter-php-client
+# OpenRouter PHP Client
 
 A PHP SDK for [OpenRouter](https://openrouter.ai) with typed request/response value objects, SSE streaming, and PSR-18 HTTP transport. The API mirrors the ergonomics of [`openai-php/client`](https://github.com/openai-php/client).
 
 ## Requirements
 
 - PHP 8.2+
-- A PSR-18 HTTP client (auto-discovered via `php-http/discovery`). Guzzle is auto-detected and configured for non-buffering streams; `symfony/http-client` (via `Psr18Client`) and `php-http/curl-client` stream by default as well. Other PSR-18 clients may buffer the full response before the iterator begins — if yours does, supply a streaming closure via `Factory::withStreamHandler()`.
+- A PSR-18 HTTP client (auto-discovered via `php-http/discovery`). Guzzle is auto-detected and configured for non-buffering streams; `symfony/http-client` (via `Psr18Client`) and `php-http/curl-client` stream by default as well. Other PSR-18 clients may buffer the full response before the iterator begins - if yours does, supply a streaming closure via `Factory::withStreamHandler()`.
 
 ## Installation
 
@@ -40,35 +40,35 @@ Status of every endpoint in the OpenRouter OpenAPI spec:
 | `/chat/completions`                           | POST                 |   ✅    | `$client->chat()->send(...)` / `sendStreamed(...)`      |
 | `/responses`                                  | POST                 |   ✅    | `$client->responses()->send(...)` / `sendStreamed(...)` |
 | `/models/user`                                | GET                  |   ✅    | `$client->models()->listForUser()`                      |
-| `/models`                                     | GET                  |   ❌    | —                                                       |
-| `/models/count`                               | GET                  |   ❌    | —                                                       |
-| `/models/{author}/{slug}/endpoints`           | GET                  |   ❌    | —                                                       |
-| `/messages`                                   | POST                 |   ❌    | —                                                       |
-| `/embeddings`                                 | POST                 |   ❌    | —                                                       |
-| `/embeddings/models`                          | GET                  |   ❌    | —                                                       |
-| `/rerank`                                     | POST                 |   ❌    | —                                                       |
-| `/generation`                                 | GET                  |   ❌    | —                                                       |
-| `/activity`                                   | GET                  |   ❌    | —                                                       |
-| `/credits`                                    | GET                  |   ❌    | —                                                       |
-| `/credits/coinbase`                           | POST                 |   ❌    | —                                                       |
-| `/key`                                        | GET                  |   ❌    | —                                                       |
-| `/keys`                                       | GET / POST           |   ❌    | —                                                       |
-| `/keys/{hash}`                                | GET / PATCH / DELETE |   ❌    | —                                                       |
-| `/auth/keys`                                  | POST                 |   ❌    | —                                                       |
-| `/auth/keys/code`                             | POST                 |   ❌    | —                                                       |
-| `/providers`                                  | GET                  |   ❌    | —                                                       |
-| `/endpoints/zdr`                              | GET                  |   ❌    | —                                                       |
-| `/organization/members`                       | GET                  |   ❌    | —                                                       |
-| `/guardrails`                                 | GET / POST           |   ❌    | —                                                       |
-| `/guardrails/{id}`                            | GET / PATCH / DELETE |   ❌    | —                                                       |
-| `/guardrails/{id}/assignments/keys`           | GET / POST           |   ❌    | —                                                       |
-| `/guardrails/{id}/assignments/keys/remove`    | POST                 |   ❌    | —                                                       |
-| `/guardrails/{id}/assignments/members`        | GET / POST           |   ❌    | —                                                       |
-| `/guardrails/{id}/assignments/members/remove` | POST                 |   ❌    | —                                                       |
-| `/guardrails/assignments/keys`                | GET                  |   ❌    | —                                                       |
-| `/guardrails/assignments/members`             | GET                  |   ❌    | —                                                       |
+| `/models`                                     | GET                  |   ❌    | -                                                       |
+| `/models/count`                               | GET                  |   ❌    | -                                                       |
+| `/models/{author}/{slug}/endpoints`           | GET                  |   ❌    | -                                                       |
+| `/messages`                                   | POST                 |   ❌    | -                                                       |
+| `/embeddings`                                 | POST                 |   ❌    | -                                                       |
+| `/embeddings/models`                          | GET                  |   ❌    | -                                                       |
+| `/rerank`                                     | POST                 |   ❌    | -                                                       |
+| `/generation`                                 | GET                  |   ❌    | -                                                       |
+| `/activity`                                   | GET                  |   ❌    | -                                                       |
+| `/credits`                                    | GET                  |   ❌    | -                                                       |
+| `/credits/coinbase`                           | POST                 |   ❌    | -                                                       |
+| `/key`                                        | GET                  |   ❌    | -                                                       |
+| `/keys`                                       | GET / POST           |   ❌    | -                                                       |
+| `/keys/{hash}`                                | GET / PATCH / DELETE |   ❌    | -                                                       |
+| `/auth/keys`                                  | POST                 |   ❌    | -                                                       |
+| `/auth/keys/code`                             | POST                 |   ❌    | -                                                       |
+| `/providers`                                  | GET                  |   ❌    | -                                                       |
+| `/endpoints/zdr`                              | GET                  |   ❌    | -                                                       |
+| `/organization/members`                       | GET                  |   ❌    | -                                                       |
+| `/guardrails`                                 | GET / POST           |   ❌    | -                                                       |
+| `/guardrails/{id}`                            | GET / PATCH / DELETE |   ❌    | -                                                       |
+| `/guardrails/{id}/assignments/keys`           | GET / POST           |   ❌    | -                                                       |
+| `/guardrails/{id}/assignments/keys/remove`    | POST                 |   ❌    | -                                                       |
+| `/guardrails/{id}/assignments/members`        | GET / POST           |   ❌    | -                                                       |
+| `/guardrails/{id}/assignments/members/remove` | POST                 |   ❌    | -                                                       |
+| `/guardrails/assignments/keys`                | GET                  |   ❌    | -                                                       |
+| `/guardrails/assignments/members`             | GET                  |   ❌    | -                                                       |
 
-Unsupported endpoints can still be reached through `$client->transporter()` — build a `Payload` and dispatch it manually. PRs adding typed wrappers are welcome.
+Unsupported endpoints can still be reached through `$client->transporter()` - build a `Payload` and dispatch it manually. PRs adding typed wrappers are welcome.
 
 ```php
 use OpenRouter\ValueObjects\Transporter\Payload;
@@ -249,7 +249,7 @@ try {
 
 ## Forward compatibility
 
-Unknown discriminator values (new tool types, message roles, content parts, response formats, stream event types) hydrate to `Unknown*` fallbacks that preserve the raw payload — your code keeps working when OpenRouter ships new variants.
+Unknown discriminator values (new tool types, message roles, content parts, response formats, stream event types) hydrate to `Unknown*` fallbacks that preserve the raw payload - your code keeps working when OpenRouter ships new variants.
 
 ## Testing
 
@@ -260,7 +260,7 @@ composer install
 
 ## Acknowledgements
 
-This library is heavily inspired by [`openai-php/client`](https://github.com/openai-php/client) — its architecture, resource/factory/transporter split, and value object ergonomics shaped much of the design here. Huge thanks to its authors and contributors.
+This library is heavily inspired by [`openai-php/client`](https://github.com/openai-php/client) - its architecture, resource/factory/transporter split, and value object ergonomics shaped much of the design here. Huge thanks to its authors and contributors.
 
 ## License
 
