@@ -40,25 +40,25 @@ Status of every endpoint in the OpenRouter OpenAPI spec:
 | `/chat/completions`                           | POST                 |   ✅    | `$client->chat()->send(...)` / `sendStreamed(...)`      |
 | `/responses`                                  | POST                 |   ✅    | `$client->responses()->send(...)` / `sendStreamed(...)` |
 | `/models/user`                                | GET                  |   ✅    | `$client->models()->listForUser()`                      |
-| `/models`                                     | GET                  |   ❌    | -                                                       |
-| `/models/count`                               | GET                  |   ❌    | -                                                       |
-| `/models/{author}/{slug}/endpoints`           | GET                  |   ❌    | -                                                       |
-| `/messages`                                   | POST                 |   ❌    | -                                                       |
-| `/embeddings`                                 | POST                 |   ❌    | -                                                       |
-| `/embeddings/models`                          | GET                  |   ❌    | -                                                       |
-| `/rerank`                                     | POST                 |   ❌    | -                                                       |
-| `/generation`                                 | GET                  |   ❌    | -                                                       |
-| `/activity`                                   | GET                  |   ❌    | -                                                       |
-| `/credits`                                    | GET                  |   ❌    | -                                                       |
-| `/credits/coinbase`                           | POST                 |   ❌    | -                                                       |
-| `/key`                                        | GET                  |   ❌    | -                                                       |
-| `/keys`                                       | GET / POST           |   ❌    | -                                                       |
-| `/keys/{hash}`                                | GET / PATCH / DELETE |   ❌    | -                                                       |
-| `/auth/keys`                                  | POST                 |   ❌    | -                                                       |
-| `/auth/keys/code`                             | POST                 |   ❌    | -                                                       |
-| `/providers`                                  | GET                  |   ❌    | -                                                       |
-| `/endpoints/zdr`                              | GET                  |   ❌    | -                                                       |
-| `/organization/members`                       | GET                  |   ❌    | -                                                       |
+| `/models`                                     | GET                  |   ✅    | `$client->models()->list(...)`                          |
+| `/models/count`                               | GET                  |   ✅    | `$client->models()->count(...)`                         |
+| `/models/{author}/{slug}/endpoints`           | GET                  |   ✅    | `$client->models()->listEndpoints($author, $slug)`      |
+| `/messages`                                   | POST                 |   ✅    | `$client->messages()->send(...)` / `sendStreamed(...)`  |
+| `/embeddings`                                 | POST                 |   ✅    | `$client->embeddings()->generate(...)`                  |
+| `/embeddings/models`                          | GET                  |   ✅    | `$client->embeddings()->listModels()`                   |
+| `/rerank`                                     | POST                 |   ✅    | `$client->rerank()->rerank(...)`                        |
+| `/generation`                                 | GET                  |   ✅    | `$client->generation()->retrieve($id)`                  |
+| `/activity`                                   | GET                  |   ✅    | `$client->activity()->list(...)`                        |
+| `/credits`                                    | GET                  |   ✅    | `$client->credits()->retrieve()`                        |
+| `/credits/coinbase`                           | POST                 |   ⚠️    | `$client->credits()->createCoinbaseCharge()` (deprecated - returns HTTP 410) |
+| `/key`                                        | GET                  |   ✅    | `$client->keys()->current()`                            |
+| `/keys`                                       | GET / POST           |   ✅    | `$client->keys()->list(...)` / `create(...)`            |
+| `/keys/{hash}`                                | GET / PATCH / DELETE |   ✅    | `$client->keys()->retrieve($hash)` / `update(...)` / `delete($hash)` |
+| `/auth/keys`                                  | POST                 |   ✅    | `$client->auth()->exchangeCode(...)`                    |
+| `/auth/keys/code`                             | POST                 |   ✅    | `$client->auth()->createAuthCode(...)`                  |
+| `/providers`                                  | GET                  |   ✅    | `$client->providers()->list()`                          |
+| `/endpoints/zdr`                              | GET                  |   ✅    | `$client->endpoints()->listZdr()`                       |
+| `/organization/members`                       | GET                  |   ✅    | `$client->organization()->listMembers(...)`             |
 | `/guardrails`                                 | GET / POST           |   ❌    | -                                                       |
 | `/guardrails/{id}`                            | GET / PATCH / DELETE |   ❌    | -                                                       |
 | `/guardrails/{id}/assignments/keys`           | GET / POST           |   ❌    | -                                                       |
@@ -74,10 +74,10 @@ Unsupported endpoints can still be reached through `$client->transporter()` - bu
 use OpenRouter\ValueObjects\Transporter\Payload;
 
 $response = $client->transporter()->requestObject(
-    Payload::list('credits'),
+    Payload::list('organization/members'),
 );
 
-$credits = $response->data();
+$members = $response->data();
 ```
 
 ## Chat completions
@@ -191,6 +191,146 @@ $result = $client->chat()->send(new CreateChatRequest(
 ));
 ```
 
+## Messages (Anthropic format)
+
+OpenRouter's Anthropic-compatible `/messages` endpoint. Same SSE plumbing as `/chat/completions`, but the request and response shapes follow Anthropic's content-block format.
+
+### Quick example
+
+```php
+$result = $client->messages()->send([
+    'model' => 'anthropic/claude-sonnet-4',
+    'max_tokens' => 1024,
+    'messages' => [
+        ['role' => 'user', 'content' => 'Hello, how are you?'],
+    ],
+]);
+
+$result->content[0]->text;      // "I'm doing well, thank you..."
+$result->stopReason;            // 'end_turn'
+$result->usage->inputTokens;    // 12
+$result->usage->outputTokens;   // 18
+```
+
+### Typed requests
+
+Every nested discriminated union is modeled (content blocks, tools, tool_choice, thinking, context_management, citations, plugins, output_config). Raw arrays still work for any field.
+
+```php
+use OpenRouter\ValueObjects\Messages\CreateMessagesRequest;
+use OpenRouter\ValueObjects\Messages\Messages\{UserMessage, AssistantMessage};
+use OpenRouter\ValueObjects\Messages\Content\{TextBlock, ImageBlock, ToolUseBlock, ToolResultBlock, MessagesCacheControl};
+use OpenRouter\ValueObjects\Messages\Tools\{CustomTool, WebSearchTool, BashTool};
+use OpenRouter\ValueObjects\Messages\Config\{MessagesToolChoice, MessagesThinkingConfig, MessagesOutputConfig};
+
+$result = $client->messages()->send(new CreateMessagesRequest(
+    model: 'anthropic/claude-sonnet-4',
+    maxTokens: 1024,
+    system: [new TextBlock('You are helpful.', cacheControl: new MessagesCacheControl(ttl: '1h'))],
+    messages: [
+        new UserMessage([
+            new TextBlock('What is in this image?'),
+            ImageBlock::url('https://example.com/cat.jpg'),
+        ]),
+    ],
+    tools: [
+        new CustomTool(
+            name: 'get_weather',
+            inputSchema: [
+                'type' => 'object',
+                'properties' => ['location' => ['type' => 'string']],
+                'required' => ['location'],
+            ],
+        ),
+        new WebSearchTool(),
+        new BashTool(),
+    ],
+    toolChoice: MessagesToolChoice::auto(disableParallelToolUse: true),
+    thinking: MessagesThinkingConfig::enabled(budgetTokens: 2048),
+));
+```
+
+### Tool calling
+
+Multi-turn tool-use round-trips through typed content blocks:
+
+```php
+use OpenRouter\ValueObjects\Messages\Content\{ToolUseBlock, ToolResultBlock};
+
+// First turn: model requests a tool call
+$first = $client->messages()->send(new CreateMessagesRequest(
+    model: 'anthropic/claude-sonnet-4',
+    maxTokens: 1024,
+    messages: [new UserMessage('Weather in Paris?')],
+    tools: [new CustomTool(name: 'get_weather', inputSchema: [...])],
+));
+
+$toolUse = $first->content[1]; // ToolUseBlock
+$weather = lookup_weather($toolUse->input['location']);
+
+// Second turn: replay assistant's tool_use + our tool_result
+$final = $client->messages()->send(new CreateMessagesRequest(
+    model: 'anthropic/claude-sonnet-4',
+    maxTokens: 1024,
+    messages: [
+        new UserMessage('Weather in Paris?'),
+        new AssistantMessage([$toolUse]),
+        new UserMessage([
+            new ToolResultBlock(toolUseId: $toolUse->id, content: $weather),
+        ]),
+    ],
+));
+```
+
+### Streaming
+
+Every SSE frame yields a typed subclass of `MessagesStreamEvent` — one per documented Anthropic event type (`message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`, `ping`, `error`). Deltas and content blocks are also typed.
+
+```php
+use OpenRouter\Responses\Messages\Stream\MessagesContentBlockDeltaEvent;
+use OpenRouter\Responses\Messages\Deltas\{TextDelta, InputJsonDelta};
+
+$stream = $client->messages()->sendStreamed(new CreateMessagesRequest(
+    model: 'anthropic/claude-sonnet-4',
+    maxTokens: 1024,
+    messages: [new UserMessage('Write a haiku.')],
+));
+
+$text = '';
+$toolArgs = '';
+foreach ($stream as $event) {
+    if ($event instanceof MessagesContentBlockDeltaEvent) {
+        if ($event->delta instanceof TextDelta) {
+            $text .= $event->delta->text;
+        } elseif ($event->delta instanceof InputJsonDelta) {
+            $toolArgs .= $event->delta->partialJson; // concat to reconstruct tool input
+        }
+    }
+}
+```
+
+### Extended thinking, caching, context management
+
+```php
+use OpenRouter\ValueObjects\Messages\ContextManagement\{ContextManagement, ClearThinkingEdit, CompactEdit};
+
+new CreateMessagesRequest(
+    model: 'anthropic/claude-sonnet-4',
+    maxTokens: 8192,
+    messages: [new UserMessage('Solve this...')],
+    thinking: MessagesThinkingConfig::enabled(budgetTokens: 4096),
+    cacheControl: new MessagesCacheControl(ttl: '1h'),
+    contextManagement: new ContextManagement([
+        ClearThinkingEdit::keepTurns(3),
+        new CompactEdit(instructions: 'summarize aggressively'),
+    ]),
+    outputConfig: MessagesOutputConfig::jsonSchema([
+        'type' => 'object',
+        'properties' => ['answer' => ['type' => 'string']],
+    ], effort: 'high'),
+);
+```
+
 ## Responses API
 
 ```php
@@ -204,6 +344,200 @@ $response->usage->totalTokens;
 
 foreach ($client->responses()->sendStreamed([...]) as $event) {
     // typed CreateStreamedResponse subclass per SSE frame
+}
+```
+
+## Embeddings
+
+```php
+use OpenRouter\Enums\Embeddings\EncodingFormat;
+use OpenRouter\ValueObjects\Embeddings\CreateEmbeddingsRequest;
+
+$response = $client->embeddings()->generate(new CreateEmbeddingsRequest(
+    input: ['The quick brown fox', 'jumps over the lazy dog'],
+    model: 'openai/text-embedding-3-small',
+    dimensions: 1536,
+    encodingFormat: EncodingFormat::Float,
+));
+
+$response->data[0]->embedding;   // list<float>
+$response->usage->promptTokens;
+$response->usage->cost;
+
+$models = $client->embeddings()->listModels();
+
+foreach ($models->data as $model) {
+    echo $model->id.PHP_EOL;
+}
+```
+
+## Rerank
+
+Rerank a list of documents against a search query.
+
+```php
+use OpenRouter\ValueObjects\Rerank\RerankRequest;
+
+$response = $client->rerank()->rerank(new RerankRequest(
+    model: 'cohere/rerank-v3.5',
+    query: 'What is the capital of France?',
+    documents: [
+        'Paris is the capital of France.',
+        'Berlin is the capital of Germany.',
+        'Madrid is the capital of Spain.',
+    ],
+    topN: 3,
+));
+
+foreach ($response->results as $result) {
+    echo "{$result->relevanceScore} — {$result->document->text}".PHP_EOL;
+}
+
+$response->usage->searchUnits;
+$response->usage->totalTokens;
+```
+
+## API Keys
+
+Inspect the current key, or manage API keys (list/create/retrieve/update/delete). Management operations require a management key.
+
+```php
+use OpenRouter\Enums\Keys\LimitReset;
+use OpenRouter\ValueObjects\Keys\CreateKeyRequest;
+use OpenRouter\ValueObjects\Keys\UpdateKeyRequest;
+
+$current = $client->keys()->current();
+$current->data->label;          // 'sk-or-v1-au7...890'
+$current->data->limitRemaining; // 74.5
+
+$keys = $client->keys()->list(includeDisabled: false, offset: 0);
+foreach ($keys->data as $key) {
+    echo "{$key->hash} — {$key->name} (\${$key->usage})".PHP_EOL;
+}
+
+$created = $client->keys()->create(new CreateKeyRequest(
+    name: 'My New API Key',
+    limit: 50.0,
+    limitReset: LimitReset::Monthly,
+    includeByokInLimit: true,
+));
+$created->key; // full API key string — returned once at creation time
+
+$retrieved = $client->keys()->retrieve($created->data->hash);
+
+$updated = $client->keys()->update($created->data->hash, new UpdateKeyRequest(
+    disabled: true,
+    limit: 100.0,
+));
+
+$client->keys()->delete($created->data->hash)->deleted; // true
+```
+
+## OAuth (PKCE)
+
+Create an authorization code and exchange it for a user-controlled API key.
+
+```php
+use OpenRouter\Enums\Auth\CodeChallengeMethod;
+use OpenRouter\ValueObjects\Auth\CreateAuthCodeRequest;
+use OpenRouter\ValueObjects\Auth\ExchangeCodeRequest;
+
+$code = $client->auth()->createAuthCode(new CreateAuthCodeRequest(
+    callbackUrl: 'https://myapp.com/auth/callback',
+    codeChallenge: $pkceChallenge,
+    codeChallengeMethod: CodeChallengeMethod::S256,
+    limit: 100.0,
+    keyLabel: 'My Custom Key',
+));
+$code->data->id; // redirect the user with this auth code
+
+// Back on your callback URL, exchange the code for an API key:
+$exchange = $client->auth()->exchangeCode(new ExchangeCodeRequest(
+    code: $_GET['code'],
+    codeVerifier: $pkceVerifier,
+    codeChallengeMethod: CodeChallengeMethod::S256,
+));
+$exchange->key;     // sk-or-v1-...
+$exchange->userId;  // user_...
+```
+
+## Organization members
+
+List members of the authenticated organization. Requires a management key. Supports offset/limit pagination (max `limit` = 100).
+
+```php
+$members = $client->organization()->listMembers(offset: 0, limit: 50);
+
+$members->totalCount; // 25
+
+foreach ($members->data as $member) {
+    echo "{$member->email} — {$member->role}".PHP_EOL;
+}
+```
+
+## Generation metadata
+
+Retrieve metadata for a previously-issued generation by its ID:
+
+```php
+$generation = $client->generation()->retrieve('gen-3bhGkxlo4XFrqiabUM7NDtwDzWwG');
+
+$generation->data->model;            // 'sao10k/l3-stheno-8b'
+$generation->data->totalCost;        // 0.0015
+$generation->data->tokensPrompt;     // 10
+$generation->data->tokensCompletion; // 25
+$generation->data->providerName;     // 'Infermatic'
+```
+
+## Activity
+
+Returns user activity data grouped by endpoint for the last 30 (completed) UTC days. Requires a management key.
+
+```php
+$activity = $client->activity()->list(
+    date: '2025-08-24',
+    apiKeyHash: 'abc123...',
+    userId: 'user_abc123',
+);
+
+foreach ($activity->data as $row) {
+    echo "{$row->date} {$row->model} \${$row->usage} ({$row->requests} reqs)".PHP_EOL;
+}
+```
+
+## Credits
+
+Returns the total credits purchased and used for the authenticated user. Requires a management key.
+
+```php
+$credits = $client->credits()->retrieve();
+
+$credits->data->totalCredits; // 100.5
+$credits->data->totalUsage;   // 25.75
+```
+
+The `$client->credits()->createCoinbaseCharge()` method maps to the deprecated `/credits/coinbase` endpoint — it always raises an `ErrorException` because the upstream API has been permanently removed. Use the OpenRouter web credits purchase flow instead.
+
+## Providers
+
+List all providers known to OpenRouter with their metadata (headquarters, datacenter locations, policy URLs).
+
+```php
+foreach ($client->providers()->list()->data as $provider) {
+    echo "{$provider->slug} — {$provider->name} ({$provider->headquarters})".PHP_EOL;
+    foreach ($provider->datacenters ?? [] as $dc) {
+        echo "  dc: {$dc}".PHP_EOL;
+    }
+}
+```
+
+## Endpoints (ZDR preview)
+
+Preview the impact of Zero Data Retention on the set of available endpoints.
+
+```php
+foreach ($client->endpoints()->listZdr()->data as $endpoint) {
+    echo "{$endpoint->name} — {$endpoint->providerName} / {$endpoint->modelId}".PHP_EOL;
 }
 ```
 

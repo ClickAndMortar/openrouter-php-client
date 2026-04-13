@@ -48,6 +48,23 @@ final class Payload
         return new self(ContentType::JSON, Method::POST, ResourceUri::create($resource), $parameters);
     }
 
+    public static function delete(string $resource, string $id = '', string $suffix = ''): self
+    {
+        $uri = $id === ''
+            ? ResourceUri::list($resource)
+            : ResourceUri::retrieve($resource, $id, $suffix);
+
+        return new self(ContentType::JSON, Method::DELETE, $uri);
+    }
+
+    /**
+     * @param  array<string, mixed>  $parameters
+     */
+    public static function modify(string $resource, string $id, array $parameters, string $suffix = ''): self
+    {
+        return new self(ContentType::JSON, Method::PATCH, ResourceUri::retrieve($resource, $id, $suffix), $parameters);
+    }
+
     public function toRequest(BaseUri $baseUri, Headers $headers, QueryParams $queryParams): RequestInterface
     {
         $requestFactory = Psr17FactoryDiscovery::findRequestFactory();
@@ -67,7 +84,7 @@ final class Payload
         $headers = $headers->withContentType($this->contentType);
 
         $body = null;
-        if ($this->method === Method::POST) {
+        if ($this->method === Method::POST || $this->method === Method::PATCH || $this->method === Method::PUT) {
             $body = $streamFactory->createStream(
                 json_encode($this->parameters, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
             );
