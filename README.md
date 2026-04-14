@@ -1,3 +1,14 @@
+<p align="center">
+    <p align="center">
+        <a href="https://github.com/ClickAndMortar/openrouter-php-client/actions"><img alt="GitHub Workflow Status (main)" src="https://img.shields.io/github/actions/workflow/status/ClickAndMortar/openrouter-php-client/ci.yml?branch=main&label=tests&style=round-square"></a>
+        <a href="https://packagist.org/packages/ClickAndMortar/openrouter-php-client"><img alt="Total Downloads" src="https://img.shields.io/packagist/dt/ClickAndMortar/openrouter-php-client"></a>
+        <a href="https://packagist.org/packages/ClickAndMortar/openrouter-php-client"><img alt="Latest Version" src="https://img.shields.io/packagist/v/ClickAndMortar/openrouter-php-client"></a>
+        <a href="https://packagist.org/packages/ClickAndMortar/openrouter-php-client"><img alt="License" src="https://img.shields.io/github/license/ClickAndMortar/openrouter-php-client"></a>
+    </p>
+</p>
+
+------
+
 # OpenRouter PHP Client
 
 A PHP SDK for [OpenRouter](https://openrouter.ai) with typed request/response value objects, SSE streaming, and PSR-18 HTTP transport. The API mirrors the ergonomics of [`openai-php/client`](https://github.com/openai-php/client).
@@ -284,7 +295,7 @@ $final = $client->messages()->send(new CreateMessagesRequest(
 
 ### Streaming
 
-Every SSE frame yields a typed subclass of `MessagesStreamEvent` — one per documented Anthropic event type (`message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`, `ping`, `error`). Deltas and content blocks are also typed.
+Every SSE frame yields a typed subclass of `MessagesStreamEvent` - one per documented Anthropic event type (`message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`, `ping`, `error`). Deltas and content blocks are also typed.
 
 ```php
 use OpenRouter\Responses\Messages\Stream\MessagesContentBlockDeltaEvent;
@@ -390,7 +401,7 @@ $response = $client->rerank()->rerank(new RerankRequest(
 ));
 
 foreach ($response->results as $result) {
-    echo "{$result->relevanceScore} — {$result->document->text}".PHP_EOL;
+    echo "{$result->relevanceScore} - {$result->document->text}".PHP_EOL;
 }
 
 $response->usage->searchUnits;
@@ -412,7 +423,7 @@ $current->data->limitRemaining; // 74.5
 
 $keys = $client->keys()->list(includeDisabled: false, offset: 0);
 foreach ($keys->data as $key) {
-    echo "{$key->hash} — {$key->name} (\${$key->usage})".PHP_EOL;
+    echo "{$key->hash} - {$key->name} (\${$key->usage})".PHP_EOL;
 }
 
 $created = $client->keys()->create(new CreateKeyRequest(
@@ -421,7 +432,7 @@ $created = $client->keys()->create(new CreateKeyRequest(
     limitReset: LimitReset::Monthly,
     includeByokInLimit: true,
 ));
-$created->key; // full API key string — returned once at creation time
+$created->key; // full API key string - returned once at creation time
 
 $retrieved = $client->keys()->retrieve($created->data->hash);
 
@@ -471,7 +482,7 @@ $members = $client->organization()->listMembers(offset: 0, limit: 50);
 $members->totalCount; // 25
 
 foreach ($members->data as $member) {
-    echo "{$member->email} — {$member->role}".PHP_EOL;
+    echo "{$member->email} - {$member->role}".PHP_EOL;
 }
 ```
 
@@ -488,7 +499,7 @@ use OpenRouter\ValueObjects\Guardrails\UpdateGuardrailRequest;
 $list = $client->guardrails()->list(offset: 0, limit: 50);
 $list->totalCount;
 foreach ($list->data as $g) {
-    echo "{$g->id} — {$g->name} (\${$g->limitUsd})".PHP_EOL;
+    echo "{$g->id} - {$g->name} (\${$g->limitUsd})".PHP_EOL;
 }
 
 $created = $client->guardrails()->create(new CreateGuardrailRequest(
@@ -566,7 +577,7 @@ $credits->data->totalCredits; // 100.5
 $credits->data->totalUsage;   // 25.75
 ```
 
-The `$client->credits()->createCoinbaseCharge()` method maps to the deprecated `/credits/coinbase` endpoint — it always raises an `ErrorException` because the upstream API has been permanently removed. Use the OpenRouter web credits purchase flow instead.
+The `$client->credits()->createCoinbaseCharge()` method maps to the deprecated `/credits/coinbase` endpoint - it always raises an `ErrorException` because the upstream API has been permanently removed. Use the OpenRouter web credits purchase flow instead.
 
 ## Providers
 
@@ -574,7 +585,7 @@ List all providers known to OpenRouter with their metadata (headquarters, datace
 
 ```php
 foreach ($client->providers()->list()->data as $provider) {
-    echo "{$provider->slug} — {$provider->name} ({$provider->headquarters})".PHP_EOL;
+    echo "{$provider->slug} - {$provider->name} ({$provider->headquarters})".PHP_EOL;
     foreach ($provider->datacenters ?? [] as $dc) {
         echo "  dc: {$dc}".PHP_EOL;
     }
@@ -587,7 +598,7 @@ Preview the impact of Zero Data Retention on the set of available endpoints.
 
 ```php
 foreach ($client->endpoints()->listZdr()->data as $endpoint) {
-    echo "{$endpoint->name} — {$endpoint->providerName} / {$endpoint->modelId}".PHP_EOL;
+    echo "{$endpoint->name} - {$endpoint->providerName} / {$endpoint->modelId}".PHP_EOL;
 }
 ```
 
