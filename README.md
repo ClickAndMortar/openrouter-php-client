@@ -59,14 +59,14 @@ Status of every endpoint in the OpenRouter OpenAPI spec:
 | `/providers`                                  | GET                  |   ✅    | `$client->providers()->list()`                          |
 | `/endpoints/zdr`                              | GET                  |   ✅    | `$client->endpoints()->listZdr()`                       |
 | `/organization/members`                       | GET                  |   ✅    | `$client->organization()->listMembers(...)`             |
-| `/guardrails`                                 | GET / POST           |   ❌    | -                                                       |
-| `/guardrails/{id}`                            | GET / PATCH / DELETE |   ❌    | -                                                       |
-| `/guardrails/{id}/assignments/keys`           | GET / POST           |   ❌    | -                                                       |
-| `/guardrails/{id}/assignments/keys/remove`    | POST                 |   ❌    | -                                                       |
-| `/guardrails/{id}/assignments/members`        | GET / POST           |   ❌    | -                                                       |
-| `/guardrails/{id}/assignments/members/remove` | POST                 |   ❌    | -                                                       |
-| `/guardrails/assignments/keys`                | GET                  |   ❌    | -                                                       |
-| `/guardrails/assignments/members`             | GET                  |   ❌    | -                                                       |
+| `/guardrails`                                 | GET / POST           |   ✅    | `$client->guardrails()->list(...)` / `create(...)`      |
+| `/guardrails/{id}`                            | GET / PATCH / DELETE |   ✅    | `$client->guardrails()->retrieve($id)` / `update(...)` / `delete($id)` |
+| `/guardrails/{id}/assignments/keys`           | GET / POST           |   ✅    | `$client->guardrails()->listKeyAssignments($id, ...)` / `bulkAssignKeys($id, $hashes)` |
+| `/guardrails/{id}/assignments/keys/remove`    | POST                 |   ✅    | `$client->guardrails()->bulkUnassignKeys($id, $hashes)` |
+| `/guardrails/{id}/assignments/members`        | GET / POST           |   ✅    | `$client->guardrails()->listMemberAssignments($id, ...)` / `bulkAssignMembers($id, $userIds)` |
+| `/guardrails/{id}/assignments/members/remove` | POST                 |   ✅    | `$client->guardrails()->bulkUnassignMembers($id, $userIds)` |
+| `/guardrails/assignments/keys`                | GET                  |   ✅    | `$client->guardrails()->listAllKeyAssignments(...)`     |
+| `/guardrails/assignments/members`             | GET                  |   ✅    | `$client->guardrails()->listAllMemberAssignments(...)`  |
 
 Unsupported endpoints can still be reached through `$client->transporter()` - build a `Payload` and dispatch it manually. PRs adding typed wrappers are welcome.
 
@@ -473,6 +473,56 @@ $members->totalCount; // 25
 foreach ($members->data as $member) {
     echo "{$member->email} — {$member->role}".PHP_EOL;
 }
+```
+
+## Guardrails
+
+Manage spend-limit guardrails and assign them to API keys or organization members. All operations require a management key. List endpoints support offset/limit pagination (max `limit` = 100).
+
+```php
+use OpenRouter\Enums\Guardrails\GuardrailInterval;
+use OpenRouter\ValueObjects\Guardrails\CreateGuardrailRequest;
+use OpenRouter\ValueObjects\Guardrails\UpdateGuardrailRequest;
+
+// List, create, retrieve, update, delete
+$list = $client->guardrails()->list(offset: 0, limit: 50);
+$list->totalCount;
+foreach ($list->data as $g) {
+    echo "{$g->id} — {$g->name} (\${$g->limitUsd})".PHP_EOL;
+}
+
+$created = $client->guardrails()->create(new CreateGuardrailRequest(
+    name: 'Production Guardrail',
+    description: 'Spend cap for prod keys',
+    limitUsd: 100.0,
+    resetInterval: GuardrailInterval::Monthly,
+    allowedProviders: ['openai', 'anthropic'],
+    enforceZdr: true,
+));
+$id = $created->data->id;
+
+$client->guardrails()->retrieve($id);
+
+$client->guardrails()->update($id, new UpdateGuardrailRequest(
+    limitUsd: 150.0,
+    resetInterval: GuardrailInterval::Weekly,
+));
+
+$client->guardrails()->delete($id)->deleted; // true
+
+// Bulk assign/unassign API keys to a guardrail
+$client->guardrails()->bulkAssignKeys($id, ['hash1', 'hash2']);
+$client->guardrails()->listKeyAssignments($id, limit: 100);
+$client->guardrails()->bulkUnassignKeys($id, ['hash1']);
+
+// Bulk assign/unassign organization members
+$client->guardrails()->bulkAssignMembers($id, ['user_abc123', 'user_def456']);
+$client->guardrails()->listMemberAssignments($id);
+$client->guardrails()->bulkUnassignMembers($id, ['user_abc123']);
+
+// List every assignment across the account
+$client->guardrails()->listAllKeyAssignments();
+$client->guardrails()->listAllMemberAssignments();
 ```
 
 ## Generation metadata
