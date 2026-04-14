@@ -22,6 +22,9 @@ namespace OpenRouter\Responses\Responses;
  */
 final class CreateResponseOutputFunctionCall implements CreateResponseOutputItem
 {
+    /** @var array<string, mixed>|null Memoised JSON-decoded arguments. */
+    private ?array $decodedArguments = null;
+
     private function __construct(
         public readonly string $id,
         public readonly string $callId,
@@ -29,6 +32,27 @@ final class CreateResponseOutputFunctionCall implements CreateResponseOutputItem
         public readonly string $arguments,
         public readonly ?string $status,
     ) {
+    }
+
+    /**
+     * JSON-decoded `arguments`. Returns `[]` when empty or malformed — use
+     * `$arguments` directly for strict decoding. Result is memoised.
+     *
+     * @return array<string, mixed>
+     */
+    public function decodedArguments(): array
+    {
+        if ($this->decodedArguments !== null) {
+            return $this->decodedArguments;
+        }
+
+        if ($this->arguments === '') {
+            return $this->decodedArguments = [];
+        }
+
+        $decoded = json_decode($this->arguments, true);
+
+        return $this->decodedArguments = is_array($decoded) ? $decoded : [];
     }
 
     /**

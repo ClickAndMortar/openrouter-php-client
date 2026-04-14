@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OpenRouter\Resources;
 
+use OpenRouter\Agent\ChatAgent;
 use OpenRouter\Contracts\Resources\ChatContract;
 use OpenRouter\Responses\Chat\ChatResult;
 use OpenRouter\Responses\Chat\Stream\ChatStreamChunk;
@@ -65,5 +66,14 @@ final class Chat implements ChatContract
         $response = $this->transporter->requestStream($payload);
 
         return new StreamResponse(ChatStreamChunk::class, $response);
+    }
+
+    /**
+     * Starts a fluent {@see ChatAgent} for multi-turn tool-use loops against
+     * `/chat/completions`. See the README "Agentic helpers" section for usage.
+     */
+    public function agent(): ChatAgent
+    {
+        return new ChatAgent($this);
     }
 }

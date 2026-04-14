@@ -89,6 +89,63 @@ final class CreateResponseTest extends TestCase
         $this->assertSame('get_weather', $response->output[1]->name);
     }
 
+    public function testTextPrefersOutputTextShortCircuit(): void
+    {
+        $attributes = ResponsesCreateFixture::ATTRIBUTES;
+        $attributes['output_text'] = 'Precomputed text';
+
+        $response = CreateResponse::from($attributes, MetaInformation::from([]));
+
+        $this->assertSame('Precomputed text', $response->text());
+    }
+
+    public function testTextJoinsOutputTextPartsWhenNoShortCircuit(): void
+    {
+        $attributes = ResponsesCreateFixture::ATTRIBUTES;
+        $attributes['output'][0]['content'] = [
+            ['type' => 'output_text', 'text' => 'Hello '],
+            ['type' => 'output_text', 'text' => 'world'],
+        ];
+
+        $response = CreateResponse::from($attributes, MetaInformation::from([]));
+
+        $this->assertSame('Hello world', $response->text());
+    }
+
+    public function testTextReturnsNullForToolCallOnlyOutput(): void
+    {
+        $attributes = ResponsesCreateFixture::ATTRIBUTES;
+        $attributes['output'] = [[
+            'id' => 'fc-1',
+            'type' => 'function_call',
+            'call_id' => 'call-1',
+            'name' => 'get_weather',
+            'arguments' => '{"location":"Paris"}',
+        ]];
+
+        $response = CreateResponse::from($attributes, MetaInformation::from([]));
+
+        $this->assertNull($response->text());
+        $calls = $response->toolCalls();
+        $this->assertCount(1, $calls);
+        $this->assertSame('get_weather', $calls[0]->name);
+        $this->assertSame(['location' => 'Paris'], $calls[0]->decodedArguments());
+        $this->assertSame($calls[0], $response->functionCall('get_weather'));
+        $this->assertNull($response->functionCall('missing'));
+    }
+
+    public function testMessagesAndReasoningFiltersOutputByType(): void
+    {
+        $response = CreateResponse::from(
+            ResponsesCreateWithRichOutputFixture::ATTRIBUTES,
+            MetaInformation::from([]),
+        );
+
+        $this->assertGreaterThanOrEqual(1, count($response->messages()));
+        $this->assertContainsOnlyInstancesOf(CreateResponseOutputMessage::class, $response->messages());
+        $this->assertContainsOnlyInstancesOf(CreateResponseOutputReasoning::class, $response->reasoning());
+    }
+
     public function testFromHydratesRichOutputFixture(): void
     {
         $response = CreateResponse::from(

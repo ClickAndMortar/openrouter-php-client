@@ -97,6 +97,71 @@ final class ChatResult implements ResponseContract, ResponseHasMetaInformationCo
     }
 
     /**
+     * Final assistant text for the given choice. Flattens `content`
+     * content-parts arrays by concatenating `text`-typed parts; returns the
+     * raw string when `content` is a string, or null when the model
+     * produced only tool calls / refusal / non-text parts.
+     */
+    public function text(int $choice = 0): ?string
+    {
+        $message = $this->choices[$choice]->message ?? null;
+
+        if ($message === null) {
+            return null;
+        }
+
+        $content = $message->content;
+
+        if (is_string($content)) {
+            return $content;
+        }
+
+        if (is_array($content)) {
+            $parts = [];
+            foreach ($content as $part) {
+                if (is_array($part)
+                    && isset($part['type'], $part['text'])
+                    && $part['type'] === 'text'
+                    && is_string($part['text'])
+                ) {
+                    $parts[] = $part['text'];
+                }
+            }
+
+            return $parts === [] ? null : implode('', $parts);
+        }
+
+        return null;
+    }
+
+    /**
+     * Tool calls requested by the assistant on the given choice. Returns an
+     * empty list when the choice is out-of-range or the model produced no
+     * tool calls.
+     *
+     * @return list<ChatToolCall>
+     */
+    public function toolCalls(int $choice = 0): array
+    {
+        return $this->choices[$choice]->message->toolCalls ?? [];
+    }
+
+    public function finishReason(int $choice = 0): ?string
+    {
+        return $this->choices[$choice]->finishReason ?? null;
+    }
+
+    public function refusal(int $choice = 0): ?string
+    {
+        return $this->choices[$choice]->message->refusal ?? null;
+    }
+
+    public function reasoning(int $choice = 0): ?string
+    {
+        return $this->choices[$choice]->message->reasoning ?? null;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(): array

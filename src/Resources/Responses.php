@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OpenRouter\Resources;
 
+use OpenRouter\Agent\ResponsesAgent;
 use OpenRouter\Contracts\Resources\ResponsesContract;
 use OpenRouter\Responses\Responses\CreateResponse;
 use OpenRouter\Responses\Responses\CreateStreamedResponse;
@@ -68,5 +69,14 @@ final class Responses implements ResponsesContract
         $response = $this->transporter->requestStream($payload);
 
         return new StreamResponse(CreateStreamedResponse::class, $response);
+    }
+
+    /**
+     * Starts a fluent {@see ResponsesAgent} for multi-turn tool-use loops
+     * against `/responses`. See the README "Agentic helpers" section for usage.
+     */
+    public function agent(): ResponsesAgent
+    {
+        return new ResponsesAgent($this);
     }
 }

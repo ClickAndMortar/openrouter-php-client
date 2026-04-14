@@ -141,6 +141,95 @@ final class CreateResponse implements ResponseContract, ResponseHasMetaInformati
     }
 
     /**
+     * Final assistant text. Prefers the server-provided `output_text`
+     * short-circuit when available; otherwise walks every
+     * {@see CreateResponseOutputMessage} in `$output` and concatenates every
+     * `output_text` content part it finds. Returns null when the model
+     * produced no textual output (e.g. tool-call-only turns).
+     */
+    public function text(): ?string
+    {
+        if ($this->outputText !== null && $this->outputText !== '') {
+            return $this->outputText;
+        }
+
+        $parts = [];
+        foreach ($this->output as $item) {
+            if (! $item instanceof CreateResponseOutputMessage) {
+                continue;
+            }
+            foreach ($item->content as $content) {
+                if ($content->type === 'output_text' && $content->text !== null) {
+                    $parts[] = $content->text;
+                }
+            }
+        }
+
+        return $parts === [] ? null : implode('', $parts);
+    }
+
+    /**
+     * Function-call output items requested by the model.
+     *
+     * @return list<CreateResponseOutputFunctionCall>
+     */
+    public function toolCalls(): array
+    {
+        $calls = [];
+        foreach ($this->output as $item) {
+            if ($item instanceof CreateResponseOutputFunctionCall) {
+                $calls[] = $item;
+            }
+        }
+
+        return $calls;
+    }
+
+    /**
+     * First function-call item whose `name` matches, or null.
+     */
+    public function functionCall(string $name): ?CreateResponseOutputFunctionCall
+    {
+        foreach ($this->output as $item) {
+            if ($item instanceof CreateResponseOutputFunctionCall && $item->name === $name) {
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return list<CreateResponseOutputMessage>
+     */
+    public function messages(): array
+    {
+        $messages = [];
+        foreach ($this->output as $item) {
+            if ($item instanceof CreateResponseOutputMessage) {
+                $messages[] = $item;
+            }
+        }
+
+        return $messages;
+    }
+
+    /**
+     * @return list<CreateResponseOutputReasoning>
+     */
+    public function reasoning(): array
+    {
+        $items = [];
+        foreach ($this->output as $item) {
+            if ($item instanceof CreateResponseOutputReasoning) {
+                $items[] = $item;
+            }
+        }
+
+        return $items;
+    }
+
+    /**
      * @return CreateResponseType
      */
     public function toArray(): array

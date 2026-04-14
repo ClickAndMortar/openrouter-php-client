@@ -13,6 +13,8 @@
 
 A PHP SDK for [OpenRouter](https://openrouter.ai) with typed request/response value objects, SSE streaming, and PSR-18 HTTP transport. The API mirrors the ergonomics of [`openai-php/client`](https://github.com/openai-php/client).
 
+Alongside full coverage of the OpenRouter REST API, the SDK includes [agentic helpers](#agentic-helpers) that make working with LLMs easier: define your tools as plain PHP closures, call `->run()`, and the client takes care of the back-and-forth with the model — calling your tools, feeding results back, and looping until the model is done — so you get a final answer without writing the glue code yourself.
+
 ## Requirements
 
 - PHP 8.2+
@@ -40,7 +42,11 @@ $result = $client->chat()->send([
 ]);
 
 echo $result->choices[0]->message->content;
+// Or use the convenience accessor — flattens content parts, null-safe:
+echo $result->text();
 ```
+
+> **Agentic tool loops:** prefer `$client->chat()->agent()` / `$client->responses()->agent()` over hand-rolled tool-call plumbing. See [Agentic helpers](#agentic-helpers) below.
 
 ## Endpoint coverage
 
@@ -356,6 +362,133 @@ $response->usage->totalTokens;
 foreach ($client->responses()->sendStreamed([...]) as $event) {
     // typed CreateStreamedResponse subclass per SSE frame
 }
+```
+
+## Agentic helpers
+
+The SDK ships a small agent runner that removes the boilerplate around tool loops and output extraction — inspired by OpenRouter's TypeScript [`callModel`](https://openrouter.ai/docs/sdks/typescript/call-model/overview) API. Available for both `/chat/completions` (`$client->chat()->agent()`) and `/responses` (`$client->responses()->agent()`).
+
+### Result accessors
+
+Both `ChatResult` and `CreateResponse` expose shortcut methods so you don't have to walk the raw structure:
+
+```php
+$result = $client->chat()->send(new CreateChatRequest(/* ... */));
+
+$result->text();          // Final assistant text, flattens text content-parts, null-safe
+$result->toolCalls();     // list<ChatToolCall>
+$result->finishReason();  // 'stop' | 'tool_calls' | 'length' | ...
+$result->refusal();       // model-produced refusal string, or null
+$result->reasoning();     // assistant reasoning trace, or null
+
+foreach ($result->toolCalls() as $call) {
+    $args = $call->arguments(); // JSON-decoded, memoised — no manual json_decode
+}
+```
+
+```php
+$response = $client->responses()->send(new CreateResponseRequest(/* ... */));
+
+$response->text();                      // Prefers server output_text, else joins output_text parts
+$response->toolCalls();                 // list<CreateResponseOutputFunctionCall>
+$response->functionCall('get_weather'); // first function-call by name, or null
+$response->messages();                  // typed message output items
+$response->reasoning();                 // typed reasoning output items
+
+foreach ($response->toolCalls() as $call) {
+    $args = $call->decodedArguments();  // memoised
+}
+```
+
+### Agent runner — multi-turn tool loops
+
+Register tools with their executor closures, call `->run()`, get a final answer. The runner handles the model → tool call → tool result → model loop for you, up to `maxToolRounds`.
+
+```php
+use OpenRouter\Agent\AgentTool;
+
+$result = $client->chat()->agent()
+    ->model('openai/gpt-4o')
+    ->system('You are a travel assistant.')
+    ->user('What is the weather in Paris?')
+    ->tool(AgentTool::define(
+        name: 'get_weather',
+        execute: fn (array $args) => $weatherService->fetch($args['city']),
+        description: 'Get the current weather for a city.',
+        parameters: [
+            'type' => 'object',
+            'properties' => ['city' => ['type' => 'string']],
+            'required' => ['city'],
+        ],
+    ))
+    ->maxToolRounds(5) // or a predicate: fn (int $turn, AgentStep $last) => $turn < 5
+    ->run();
+
+echo $result->text();      // Final assistant answer after the tool loop
+$result->steps();          // list<AgentStep> — one per request/tool-exec round
+$result->finalResponse;    // underlying ChatResult for escape-hatch access
+```
+
+The `/responses` agent has the same API and uses `previous_response_id` for state chaining when the server returns one:
+
+```php
+$result = $client->responses()->agent()
+    ->model('openai/gpt-4o')
+    ->user('Book me a flight to Tokyo next week.')
+    ->tool(AgentTool::define(name: 'search_flights', execute: $searchFlights))
+    ->tool(AgentTool::define(name: 'book_flight',   execute: $bookFlight))
+    ->run();
+
+echo $result->text();
+```
+
+### Knobs
+
+| Method | Purpose |
+|---|---|
+| `->maxToolRounds(int\|Closure)` | Cap the loop. `0` disables auto-execution — raw tool calls come back in `$result->toolCalls()`. A closure `fn(int $turn, AgentStep $last): bool` gives dynamic control. |
+| `->throwOnMaxRounds(bool)` | Default true. When false, hitting the cap returns an `AgentRunResult` with `stoppedOnMaxRounds === true` instead of throwing. |
+| `->rethrowToolExceptions(bool)` | Default false: tool handler exceptions are serialised as `{"error": "..."}` and fed back to the model so it can recover. Set true to bubble them up. |
+| `->parallelToolCalls(bool)` / `->toolChoice(...)` / `->temperature(...)` / `->topP(...)` / `->maxTokens(...)` / `->responseFormat(...)` (chat) / `->maxOutputTokens(...)` / `->maxToolCalls(...)` / `->instructions(...)` (responses) | Pass-through to the underlying request VO. |
+| `->extra(array)` | Merge additional raw request fields (seed, provider, etc.) — forwarded via the `extras` bag. |
+
+`AgentTool::define()` takes a closure with the signature `fn(array $decodedArgs, AgentToolContext $ctx): mixed`. Non-string returns are `json_encode`d before being sent back to the model. The `AgentToolContext` exposes the current `turn`, the `toolCallId`, and the `toolName`.
+
+### Class-based tools
+
+For stateful tools, dependency-injected services, or tools you want to unit-test on their own, implement the `AgentToolDefinition` interface and hand instances to `->tool()` just like `AgentTool` closures — the runner accepts both.
+
+```php
+use OpenRouter\Agent\AgentToolContext;
+use OpenRouter\Agent\AgentToolDefinition;
+
+final class GetWeatherTool implements AgentToolDefinition
+{
+    public function __construct(private readonly WeatherService $weather) {}
+
+    public function name(): string { return 'get_weather'; }
+    public function description(): ?string { return 'Get the current weather for a city.'; }
+    public function parameters(): array
+    {
+        return [
+            'type' => 'object',
+            'properties' => ['city' => ['type' => 'string']],
+            'required' => ['city'],
+        ];
+    }
+    public function strict(): ?bool { return null; }
+
+    public function execute(array $arguments, AgentToolContext $context): mixed
+    {
+        return $this->weather->fetch($arguments['city']);
+    }
+}
+
+$result = $client->chat()->agent()
+    ->model('openai/gpt-4o')
+    ->user('What is the weather in Paris?')
+    ->tool(new GetWeatherTool($weatherService))
+    ->run();
 ```
 
 ## Embeddings

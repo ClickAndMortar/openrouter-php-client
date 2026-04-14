@@ -11,12 +11,37 @@ namespace OpenRouter\Responses\Chat;
  */
 final class ChatToolCall
 {
+    /** @var array<string, mixed>|null Memoised JSON-decoded arguments. */
+    private ?array $decodedArguments = null;
+
     private function __construct(
         public readonly string $id,
         public readonly string $type,
         public readonly string $functionName,
         public readonly string $functionArguments,
     ) {
+    }
+
+    /**
+     * JSON-decoded `function.arguments`. Returns `[]` when the payload is
+     * empty or malformed — callers that need strict decoding should read
+     * `$functionArguments` directly. Result is memoised per instance.
+     *
+     * @return array<string, mixed>
+     */
+    public function arguments(): array
+    {
+        if ($this->decodedArguments !== null) {
+            return $this->decodedArguments;
+        }
+
+        if ($this->functionArguments === '') {
+            return $this->decodedArguments = [];
+        }
+
+        $decoded = json_decode($this->functionArguments, true);
+
+        return $this->decodedArguments = is_array($decoded) ? $decoded : [];
     }
 
     /**
