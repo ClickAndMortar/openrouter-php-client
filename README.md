@@ -87,6 +87,8 @@ Status of every endpoint in the OpenRouter OpenAPI spec:
 
 Unsupported endpoints can still be reached through `$client->transporter()` - build a `Payload` and dispatch it manually. PRs adding typed wrappers are welcome.
 
+`api-coverage.json` tracks every operation in the live spec as either covered or a reviewed gap; see [Staying in sync with the API](#staying-in-sync-with-the-api).
+
 ```php
 use OpenRouter\ValueObjects\Transporter\Payload;
 
@@ -778,6 +780,17 @@ try {
 ## Forward compatibility
 
 Unknown discriminator values (new tool types, message roles, content parts, response formats, stream event types) hydrate to `Unknown*` fallbacks that preserve the raw payload - your code keeps working when OpenRouter ships new variants.
+
+### Staying in sync with the API
+
+The OpenRouter spec this SDK targets is vendored at `openapi-openrouter.yaml`, and `api-coverage.json` records every upstream operation as either `covered` (a typed wrapper exists) or a reviewed `known_gaps` entry.
+
+```bash
+php bin/check-api-drift.php                        # fetch the live spec and diff it
+php bin/check-api-drift.php openapi-openrouter.yaml # check the vendored copy offline
+```
+
+The check runs in CI on every push (against the vendored spec) and weekly against `https://openrouter.ai/openapi.yaml`, so a new upstream endpoint fails the build instead of going unnoticed.
 
 ## Testing
 

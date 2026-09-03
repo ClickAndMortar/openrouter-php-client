@@ -3,5 +3,4 @@
 vendor/
 composer.lock
 .phpunit.cache
-openapi-openrouter.yaml
 

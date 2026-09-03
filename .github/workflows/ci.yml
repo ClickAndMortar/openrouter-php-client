@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    # Weekly upstream drift check against the live OpenRouter spec.
+    - cron: '0 6 * * 1'
 
 jobs:
   tests:
@@ -47,3 +50,40 @@ jobs:
 
       - name: Run tests
         run: vendor/bin/phpunit
+
+  api-coverage:
+    name: API coverage manifest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # 2.37.0
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      # Deterministic: the committed spec must match api-coverage.json.
+      - name: Check vendored spec against coverage manifest
+        run: php bin/check-api-drift.php openapi-openrouter.yaml
+
+  upstream-drift:
+    name: Upstream API drift
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@accd6127cb78bee3e8082180cb391013d204ef9f # 2.37.0
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      # Fetches https://openrouter.ai/openapi.yaml and fails on unreviewed operations.
+      - name: Check live spec for drift
+        run: php bin/check-api-drift.php
