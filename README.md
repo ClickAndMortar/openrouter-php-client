@@ -26,6 +26,9 @@ Alongside full coverage of the OpenRouter REST API, the SDK includes [agentic he
 composer require clickandmortar/openrouter-php-client
 ```
 
+Coming from a 0.x release? See [UPGRADE.md](UPGRADE.md) — most upgrades need no code
+changes. Release history lives in [CHANGELOG.md](CHANGELOG.md).
+
 ## Quick start
 
 ```php
@@ -134,7 +137,7 @@ Every endpoint in the OpenRouter OpenAPI spec has a typed wrapper — 101 of 101
 
 Unsupported endpoints can still be reached through `$client->transporter()` - build a `Payload` and dispatch it manually. PRs adding typed wrappers are welcome.
 
-`api-coverage.json` tracks every operation in the live spec and CI fails when a new one appears upstream; see [Staying in sync with the API](#staying-in-sync-with-the-api).
+`api-coverage.json` tracks every operation in the live spec and CI fails when a new one appears upstream; see [Staying in sync with the API](#staying-in-sync-with-the-api). Per-release changes are in [CHANGELOG.md](CHANGELOG.md).
 
 ```php
 use OpenRouter\ValueObjects\Transporter\Payload;
@@ -1237,6 +1240,18 @@ php bin/check-api-drift.php openapi-openrouter.yaml # check the vendored copy of
 ```
 
 The check runs in CI on every push (against the vendored spec) and weekly against `https://openrouter.ai/openapi.yaml`, so a new upstream endpoint fails the build instead of going unnoticed.
+
+## Changelog and upgrading
+
+Every release is documented in [CHANGELOG.md](CHANGELOG.md), grouped into features, fixes
+and BC breaks.
+
+[UPGRADE.md](UPGRADE.md) covers the 0.x → 1.0 migration. The short version: 1.0 is
+additive for code that uses the SDK, and breaking only for code that *implements* its
+contract interfaces — a custom transporter or a hand-written fake client.
+
+This project follows [Semantic Versioning](https://semver.org/). From 1.0 on, the contract
+interfaces will not change before 2.0.0.
 
 ## Testing
 
