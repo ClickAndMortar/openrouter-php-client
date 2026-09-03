@@ -15,12 +15,15 @@ final class Payload
 {
     /**
      * @param  array<string, mixed>  $parameters
+     * @param  array<string, mixed>  $query  Query string parameters, for methods whose
+     *                                       `$parameters` are carried in the body.
      */
     private function __construct(
         private readonly ContentType $contentType,
         private readonly Method $method,
         private readonly ResourceUri $uri,
         private readonly array $parameters = [],
+        private readonly array $query = [],
     ) {
     }
 
@@ -48,13 +51,16 @@ final class Payload
         return new self(ContentType::JSON, Method::POST, ResourceUri::create($resource), $parameters);
     }
 
-    public static function delete(string $resource, string $id = '', string $suffix = ''): self
+    /**
+     * @param  array<string, mixed>  $query
+     */
+    public static function delete(string $resource, string $id = '', string $suffix = '', array $query = []): self
     {
         $uri = $id === ''
             ? ResourceUri::list($resource)
             : ResourceUri::retrieve($resource, $id, $suffix);
 
-        return new self(ContentType::JSON, Method::DELETE, $uri);
+        return new self(ContentType::JSON, Method::DELETE, $uri, [], $query);
     }
 
     /**
@@ -65,6 +71,21 @@ final class Payload
         return new self(ContentType::JSON, Method::PATCH, ResourceUri::retrieve($resource, $id, $suffix), $parameters);
     }
 
+    /**
+     * Builds a `multipart/form-data` upload.
+     *
+     * `$fields` maps each form field to an {@see UploadedFile}, a scalar, or a
+     * list of scalars (sent as repeated `name[]` parts, which is how the API
+     * expects `timestamp_granularities`).
+     *
+     * @param  array<string, UploadedFile|scalar|array<int, scalar>>  $fields
+     * @param  array<string, mixed>  $query
+     */
+    public static function upload(string $resource, array $fields, array $query = []): self
+    {
+        return new self(ContentType::MULTIPART, Method::POST, ResourceUri::create($resource), $fields, $query);
+    }
+
     public function toRequest(BaseUri $baseUri, Headers $headers, QueryParams $queryParams): RequestInterface
     {
         $requestFactory = Psr17FactoryDiscovery::findRequestFactory();
@@ -72,7 +93,7 @@ final class Payload
 
         $uri = $baseUri->toString().$this->uri->toString();
 
-        $query = $queryParams->toArray();
+        $query = [...$queryParams->toArray(), ...$this->query];
         if ($this->method === Method::GET) {
             $query = [...$query, ...$this->parameters];
         }
@@ -81,13 +102,20 @@ final class Payload
             $uri .= '?'.http_build_query($query);
         }
 
-        $headers = $headers->withContentType($this->contentType);
-
         $body = null;
-        if ($this->method === Method::POST || $this->method === Method::PATCH || $this->method === Method::PUT) {
-            $body = $streamFactory->createStream(
-                json_encode($this->parameters, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-            );
+
+        if ($this->contentType === ContentType::MULTIPART) {
+            $boundary = bin2hex(random_bytes(16));
+            $headers = $headers->withContentType($this->contentType, '; boundary='.$boundary);
+            $body = $streamFactory->createStream($this->encodeMultipart($boundary));
+        } else {
+            $headers = $headers->withContentType($this->contentType);
+
+            if ($this->method === Method::POST || $this->method === Method::PATCH || $this->method === Method::PUT) {
+                $body = $streamFactory->createStream(
+                    json_encode($this->parameters, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                );
+            }
         }
 
         $request = $requestFactory->createRequest($this->method->value, $uri);
@@ -101,5 +129,50 @@ final class Payload
         }
 
         return $request;
+    }
+
+    /**
+     * RFC 7578 body. Files carry a filename and their own content type; scalars
+     * are sent bare; lists become repeated `name[]` parts.
+     */
+    private function encodeMultipart(string $boundary): string
+    {
+        $body = '';
+
+        foreach ($this->parameters as $name => $value) {
+            if ($value instanceof UploadedFile) {
+                $body .= "--{$boundary}\r\n"
+                    ."Content-Disposition: form-data; name=\"{$name}\"; filename=\"{$value->filename}\"\r\n"
+                    ."Content-Type: {$value->contentType}\r\n\r\n"
+                    .$value->contents."\r\n";
+
+                continue;
+            }
+
+            if (is_array($value)) {
+                foreach ($value as $item) {
+                    $body .= "--{$boundary}\r\n"
+                        ."Content-Disposition: form-data; name=\"{$name}[]\"\r\n\r\n"
+                        .self::stringify($item)."\r\n";
+                }
+
+                continue;
+            }
+
+            $body .= "--{$boundary}\r\n"
+                ."Content-Disposition: form-data; name=\"{$name}\"\r\n\r\n"
+                .self::stringify($value)."\r\n";
+        }
+
+        return $body."--{$boundary}--\r\n";
+    }
+
+    private static function stringify(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        return (string) $value;   // @phpstan-ignore-line — multipart fields are scalars
     }
 }

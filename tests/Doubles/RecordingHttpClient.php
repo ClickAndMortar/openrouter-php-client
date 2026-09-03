@@ -32,6 +32,15 @@ final class RecordingHttpClient implements ClientInterface
         );
     }
 
+    public function enqueueBinary(string $body, string $contentType, int $statusCode = 200, array $headers = []): void
+    {
+        $this->responses[] = new Response(
+            $statusCode,
+            array_merge(['Content-Type' => $contentType], $headers),
+            $body,
+        );
+    }
+
     public function enqueueStream(string $sseBody, int $statusCode = 200, array $headers = []): void
     {
         $this->responses[] = new Response(

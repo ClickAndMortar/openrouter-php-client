@@ -25,6 +25,7 @@ use OpenRouter\Exceptions\Http\UnauthorizedException;
 use OpenRouter\Exceptions\Http\UnprocessableEntityException;
 use OpenRouter\Exceptions\TransporterException;
 use OpenRouter\Exceptions\UnserializableResponse;
+use OpenRouter\Responses\BinaryResponse;
 use OpenRouter\ValueObjects\Transporter\BaseUri;
 use OpenRouter\ValueObjects\Transporter\Headers;
 use OpenRouter\ValueObjects\Transporter\Payload;
@@ -77,6 +78,24 @@ final class HttpTransporter implements TransporterContract
         }
 
         return Response::from($data, $response->getHeaders());
+    }
+
+    public function requestContent(Payload $payload): BinaryResponse
+    {
+        $request = $payload->toRequest($this->baseUri, $this->headers, $this->queryParams);
+
+        $response = $this->sendRequest(fn (): ResponseInterface => $this->client->sendRequest($request));
+
+        $contents = (string) $response->getBody();
+
+        // An error is still reported as JSON even on a binary endpoint.
+        $this->throwIfJsonError($response, $contents);
+
+        return BinaryResponse::from(
+            $contents,
+            $response->getHeaderLine('Content-Type'),
+            $response->getHeaders(),
+        );
     }
 
     public function requestStream(Payload $payload): ResponseInterface

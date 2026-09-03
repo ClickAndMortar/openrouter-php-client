@@ -99,6 +99,26 @@ $response = $client->transporter()->requestObject(
 $members = $response->data();
 ```
 
+The transporter handles three body shapes, so the escape hatch reaches every endpoint:
+
+```php
+use OpenRouter\ValueObjects\Transporter\Payload;
+use OpenRouter\ValueObjects\Transporter\UploadedFile;
+
+// JSON in, JSON out
+$client->transporter()->requestObject(Payload::create('some/endpoint', ['k' => 'v']));
+
+// multipart/form-data upload
+$client->transporter()->requestObject(Payload::upload('some/endpoint', [
+    'file' => UploadedFile::fromPath('/path/to/file.bin'),
+    'model' => 'openai/whisper-1',
+]));
+
+// a non-JSON body (audio, video, a file download) — returned as raw bytes
+$binary = $client->transporter()->requestContent(Payload::list('some/endpoint/content'));
+$binary->saveTo('out.bin');
+```
+
 ### Filtering and paginating models
 
 `GET /models` accepts far more query parameters than it used to. The common ones are named arguments; everything else goes through `$filters`, and the response carries the pagination cursor:
