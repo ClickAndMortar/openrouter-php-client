@@ -7,13 +7,17 @@ namespace OpenRouter;
 use OpenRouter\Contracts\ClientContract;
 use OpenRouter\Contracts\TransporterContract;
 use OpenRouter\Resources\Activity;
+use OpenRouter\Resources\Audio;
 use OpenRouter\Resources\Auth;
 use OpenRouter\Resources\Chat;
+use OpenRouter\Resources\Containers;
 use OpenRouter\Resources\Credits;
 use OpenRouter\Resources\Embeddings;
 use OpenRouter\Resources\Endpoints;
+use OpenRouter\Resources\Files;
 use OpenRouter\Resources\Generation;
 use OpenRouter\Resources\Guardrails;
+use OpenRouter\Resources\Images;
 use OpenRouter\Resources\Keys;
 use OpenRouter\Resources\Messages;
 use OpenRouter\Resources\Models;
@@ -21,6 +25,7 @@ use OpenRouter\Resources\Organization;
 use OpenRouter\Resources\Providers;
 use OpenRouter\Resources\Rerank;
 use OpenRouter\Resources\Responses;
+use OpenRouter\Resources\Videos;
 
 final class Client implements ClientContract
 {
@@ -51,6 +56,16 @@ final class Client implements ClientContract
     public function embeddings(): Embeddings
     {
         return new Embeddings($this->transporter);
+    }
+
+    public function containers(): Containers
+    {
+        return new Containers($this->transporter);
+    }
+
+    public function files(): Files
+    {
+        return new Files($this->transporter);
     }
 
     public function generation(): Generation
@@ -101,6 +116,21 @@ final class Client implements ClientContract
     public function organization(): Organization
     {
         return new Organization($this->transporter);
+    }
+
+    public function audio(): Audio
+    {
+        return new Audio($this->transporter);
+    }
+
+    public function images(): Images
+    {
+        return new Images($this->transporter);
+    }
+
+    public function videos(): Videos
+    {
+        return new Videos($this->transporter);
     }
 
     public function transporter(): TransporterContract

@@ -64,6 +64,22 @@ Status of every endpoint in the OpenRouter OpenAPI spec:
 | `/embeddings`                                 | POST                 |   ✅    | `$client->embeddings()->generate(...)`                  |
 | `/embeddings/models`                          | GET                  |   ✅    | `$client->embeddings()->listModels()`                   |
 | `/rerank`                                     | POST                 |   ✅    | `$client->rerank()->rerank(...)`                        |
+| `/images`                                     | POST                 |   ✅    | `$client->images()->generate(...)` / `generateStreamed(...)` |
+| `/images/models`                              | GET                  |   ✅    | `$client->images()->listModels()`                       |
+| `/images/models/{author}/{slug}/endpoints`    | GET                  |   ✅    | `$client->images()->listEndpoints($author, $slug)`      |
+| `/videos`                                     | POST                 |   ✅    | `$client->videos()->generate(...)`                      |
+| `/videos/{jobId}`                             | GET                  |   ✅    | `$client->videos()->retrieve($jobId)`                   |
+| `/videos/{jobId}/content`                     | GET                  |   ✅    | `$client->videos()->download($jobId)`                   |
+| `/videos/models`                              | GET                  |   ✅    | `$client->videos()->listModels()`                       |
+| `/audio/speech`                               | POST                 |   ✅    | `$client->audio()->speech(...)`                         |
+| `/audio/transcriptions`                       | POST                 |   ✅    | `$client->audio()->transcribe(...)` / `transcribeFile(...)` |
+| `/files`                                      | GET / POST           |   ✅    | `$client->files()->list(...)` / `upload(...)`           |
+| `/files/{file_id}`                            | GET / DELETE         |   ✅    | `$client->files()->retrieve($id)` / `delete($id)`       |
+| `/files/{file_id}/content`                    | GET                  |   ✅    | `$client->files()->download($id)`                       |
+| `/containers/{id}/files`                      | GET                  |   ✅    | `$client->containers()->listFiles($containerId)`        |
+| `/containers/{id}/files/{file_id}`            | GET                  |   ✅    | `$client->containers()->retrieveFile($containerId, $fileId)` |
+| `/containers/{id}/files/{file_id}/content`    | GET                  |   ✅    | `$client->containers()->downloadFile($containerId, $fileId)` |
+| `/containers/{id}/files/{file_id}/promote`    | POST                 |   ✅    | `$client->containers()->promoteFile($containerId, $fileId)` |
 | `/generation`                                 | GET                  |   ✅    | `$client->generation()->retrieve($id)`                  |
 | `/activity`                                   | GET                  |   ✅    | `$client->activity()->list(...)`                        |
 | `/credits`                                    | GET                  |   ✅    | `$client->credits()->retrieve()`                        |
@@ -612,6 +628,126 @@ $result = $client->chat()->agent()
     ->user('What is the weather in Paris?')
     ->tool(new GetWeatherTool($weatherService))
     ->run();
+```
+
+## Images
+
+```php
+use OpenRouter\ValueObjects\Images\CreateImageRequest;
+
+$result = $client->images()->generate(new CreateImageRequest(
+    model: 'openai/gpt-image-1',
+    prompt: 'A cat surfing a wave, watercolour',
+    n: 1,
+    size: '1024x1024',
+    outputFormat: 'png',
+));
+
+file_put_contents('cat.png', $result->data[0]->binary());   // base64 decoded for you
+echo $result->usage?->cost;
+```
+
+Streaming yields progressive previews plus any text the model emits while it works. Only models whose catalogue entry reports `supports_streaming` accept it:
+
+```php
+foreach ($client->images()->generateStreamed([
+    'model' => 'openai/gpt-image-1',
+    'prompt' => 'A cat surfing',
+]) as $event) {
+    match (true) {
+        $event instanceof ImageStreamTextChunkEvent    => print($event->text),
+        $event instanceof ImageStreamPartialImageEvent => savePreview($event->binary(), $event->partialImageIndex),
+        $event instanceof ImageStreamCompletedEvent    => file_put_contents('final.png', $event->binary()),
+        default => null,   // unknown frames fall back to ImageStreamEvent
+    };
+}
+```
+
+`$client->images()->listModels()` and `->listEndpoints($author, $slug)` describe which models exist and what each provider endpoint supports.
+
+## Videos
+
+Video generation is asynchronous — submit, poll, download:
+
+```php
+use OpenRouter\ValueObjects\Videos\CreateVideoRequest;
+
+$job = $client->videos()->generate(new CreateVideoRequest(
+    model: 'google/veo-3',
+    prompt: 'A timelapse of a city at dusk',
+    duration: 8,
+    aspectRatio: '16:9',
+    generateAudio: true,
+));
+
+do {
+    sleep(5);
+    $job = $client->videos()->retrieve($job->id);
+} while (! $job->isTerminal());
+
+$client->videos()->download($job->id)->saveTo('city.mp4');
+```
+
+`$client->videos()->listModels()` reports each model's supported resolutions, aspect ratios and durations, and whether it can generate audio.
+
+## Audio
+
+```php
+use OpenRouter\ValueObjects\Audio\CreateSpeechRequest;
+
+$speech = $client->audio()->speech(new CreateSpeechRequest(
+    model: 'openai/tts-1',
+    input: 'Hello from OpenRouter.',
+    voice: 'alloy',
+    responseFormat: 'mp3',
+));
+
+$speech->saveTo('hello.mp3');
+echo $speech->contentType;   // audio/mpeg
+```
+
+Transcription accepts either an uploaded file or inline audio:
+
+```php
+use OpenRouter\ValueObjects\Transporter\UploadedFile;
+
+$transcription = $client->audio()->transcribeFile(
+    UploadedFile::fromPath('/path/to/interview.wav'),
+    'openai/whisper-1',
+    ['language' => 'en', 'timestamp_granularities' => ['word', 'segment']],
+);
+
+echo $transcription->text;
+foreach ($transcription->segments as $segment) {
+    printf("[%.2f-%.2f] %s\n", $segment->start, $segment->end, $segment->text);
+}
+```
+
+## Files
+
+```php
+use OpenRouter\ValueObjects\Transporter\UploadedFile;
+
+$file = $client->files()->upload(UploadedFile::fromPath('/path/to/report.pdf'))->data;
+
+$client->files()->list(limit: 20)->data;
+$client->files()->retrieve($file->id)->data->sizeInBytes();
+$client->files()->download($file->id)->saveTo('copy.pdf');
+$client->files()->delete($file->id);
+```
+
+Pass `provider: 'openai'` (or `'anthropic'`) to store the file with that provider under your own key instead of on OpenRouter. The payload shape is negotiated per request and named by `_shape`; `StoredFile::sizeInBytes()` reads the size without branching on it.
+
+## Container files
+
+Files a code-interpreter run produced, and promoting one into durable workspace documents:
+
+```php
+$files = $client->containers()->listFiles($containerId)->data;
+
+$client->containers()->downloadFile($containerId, $files[0]->id)->saveTo('chart.png');
+
+$stored = $client->containers()->promoteFile($containerId, $files[0]->id)->data;
 ```
 
 ## Embeddings

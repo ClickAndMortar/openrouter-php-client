@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace OpenRouter\Contracts;
 
 use OpenRouter\Contracts\Resources\ActivityContract;
+use OpenRouter\Contracts\Resources\AudioContract;
 use OpenRouter\Contracts\Resources\AuthContract;
 use OpenRouter\Contracts\Resources\ChatContract;
+use OpenRouter\Contracts\Resources\ContainersContract;
 use OpenRouter\Contracts\Resources\CreditsContract;
 use OpenRouter\Contracts\Resources\EmbeddingsContract;
 use OpenRouter\Contracts\Resources\EndpointsContract;
+use OpenRouter\Contracts\Resources\FilesContract;
 use OpenRouter\Contracts\Resources\GenerationContract;
 use OpenRouter\Contracts\Resources\GuardrailsContract;
+use OpenRouter\Contracts\Resources\ImagesContract;
 use OpenRouter\Contracts\Resources\KeysContract;
 use OpenRouter\Contracts\Resources\MessagesContract;
 use OpenRouter\Contracts\Resources\ModelsContract;
@@ -19,6 +23,7 @@ use OpenRouter\Contracts\Resources\OrganizationContract;
 use OpenRouter\Contracts\Resources\ProvidersContract;
 use OpenRouter\Contracts\Resources\RerankContract;
 use OpenRouter\Contracts\Resources\ResponsesContract;
+use OpenRouter\Contracts\Resources\VideosContract;
 
 interface ClientContract
 {
@@ -27,6 +32,21 @@ interface ClientContract
      * {@see \OpenRouter\ValueObjects\Transporter\Payload} and dispatch it via
      * {@see TransporterContract::requestObject()} or {@see TransporterContract::requestStream()}.
      */
+    /**
+     * Speech synthesis and transcription.
+     */
+    public function audio(): AudioContract;
+
+    /**
+     * Image generation, streamed or buffered, plus the image model catalogue.
+     */
+    public function images(): ImagesContract;
+
+    /**
+     * Asynchronous video generation: submit, poll, download.
+     */
+    public function videos(): VideosContract;
+
     public function transporter(): TransporterContract;
 
 
@@ -72,6 +92,16 @@ interface ClientContract
      *
      * @see https://openrouter.ai/docs/api-reference/get-a-generation
      */
+    /**
+     * Files produced inside code-interpreter containers.
+     */
+    public function containers(): ContainersContract;
+
+    /**
+     * Stored files: upload, list, retrieve metadata, download and delete.
+     */
+    public function files(): FilesContract;
+
     public function generation(): GenerationContract;
 
     /**
