@@ -41,6 +41,8 @@ final class ApiKeyInfo
         public readonly ?string $creatorUserId,
         public readonly ?string $expiresAt,
         public readonly ?array $rateLimit,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -49,6 +51,33 @@ final class ApiKeyInfo
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'label',
+            'limit',
+            'limit_remaining',
+            'limit_reset',
+            'include_byok_in_limit',
+            'is_free_tier',
+            'is_management_key',
+            'is_provisioning_key',
+            'usage',
+            'usage_daily',
+            'usage_weekly',
+            'usage_monthly',
+            'byok_usage',
+            'byok_usage_daily',
+            'byok_usage_weekly',
+            'byok_usage_monthly',
+            'creator_user_id',
+            'expires_at',
+            'rate_limit',
+            'created_at',
+            'disabled',
+            'hash',
+            'name',
+            'updated_at',
+        ]));
+
         $float = static fn (mixed $v): float => is_numeric($v) ? (float) $v : 0.0;
         $str = static fn (mixed $v): string => is_string($v) ? $v : '';
         $nullableStr = static fn (mixed $v): ?string => is_string($v) ? $v : null;
@@ -83,6 +112,7 @@ final class ApiKeyInfo
             creatorUserId: $nullableStr($attributes['creator_user_id'] ?? null),
             expiresAt: $nullableStr($attributes['expires_at'] ?? null),
             rateLimit: $rateLimit,
+            extras: $extras,
         );
     }
 
@@ -116,6 +146,6 @@ final class ApiKeyInfo
             $data['rate_limit'] = $this->rateLimit;
         }
 
-        return $data;
+        return [...$data, ...$this->extras];
     }
 }

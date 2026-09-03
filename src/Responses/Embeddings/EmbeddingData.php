@@ -24,6 +24,8 @@ final class EmbeddingData
         public readonly string $object,
         public readonly int $index,
         public readonly array|string $embedding,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -32,6 +34,12 @@ final class EmbeddingData
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'object',
+            'index',
+            'embedding',
+        ]));
+
         $rawEmbedding = $attributes['embedding'] ?? [];
 
         if (is_string($rawEmbedding)) {
@@ -49,6 +57,7 @@ final class EmbeddingData
             object: is_string($attributes['object'] ?? null) ? $attributes['object'] : 'embedding',
             index: is_int($attributes['index'] ?? null) ? $attributes['index'] : 0,
             embedding: $embedding,
+            extras: $extras,
         );
     }
 
@@ -57,10 +66,12 @@ final class EmbeddingData
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'object' => $this->object,
             'index' => $this->index,
             'embedding' => $this->embedding,
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

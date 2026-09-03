@@ -23,6 +23,8 @@ final class OrganizationMember
         public readonly ?string $firstName,
         public readonly ?string $lastName,
         public readonly string $role,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -31,6 +33,14 @@ final class OrganizationMember
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'role',
+        ]));
+
         $str = static fn (mixed $v): string => is_string($v) ? $v : '';
         $nullableStr = static fn (mixed $v): ?string => is_string($v) ? $v : null;
 
@@ -40,6 +50,7 @@ final class OrganizationMember
             firstName: $nullableStr($attributes['first_name'] ?? null),
             lastName: $nullableStr($attributes['last_name'] ?? null),
             role: $str($attributes['role'] ?? null),
+            extras: $extras,
         );
     }
 
@@ -48,12 +59,14 @@ final class OrganizationMember
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'email' => $this->email,
             'first_name' => $this->firstName,
             'last_name' => $this->lastName,
             'role' => $this->role,
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

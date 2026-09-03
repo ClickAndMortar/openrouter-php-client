@@ -17,6 +17,8 @@ final class ListResponseModelTopProvider
         public readonly bool $isModerated,
         public readonly ?int $contextLength,
         public readonly ?int $maxCompletionTokens,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -25,10 +27,17 @@ final class ListResponseModelTopProvider
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'context_length',
+            'max_completion_tokens',
+            'is_moderated',
+        ]));
+
         return new self(
             isModerated: $attributes['is_moderated'],
             contextLength: $attributes['context_length'] ?? null,
             maxCompletionTokens: $attributes['max_completion_tokens'] ?? null,
+            extras: $extras,
         );
     }
 
@@ -48,6 +57,6 @@ final class ListResponseModelTopProvider
         }
 
         /** @var ListResponseModelTopProviderType $data */
-        return $data;
+        return [...$data, ...$this->extras];
     }
 }

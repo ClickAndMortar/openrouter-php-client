@@ -19,6 +19,8 @@ final class ChatChoice
         public readonly ChatResponseMessage $message,
         public readonly ?ChatTokenLogprobs $logprobs,
         public readonly ?string $nativeFinishReason,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -27,6 +29,14 @@ final class ChatChoice
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'index',
+            'finish_reason',
+            'message',
+            'logprobs',
+            'native_finish_reason',
+        ]));
+
         $message = is_array($attributes['message'] ?? null) ? $attributes['message'] : [];
 
         return new self(
@@ -41,6 +51,7 @@ final class ChatChoice
             nativeFinishReason: isset($attributes['native_finish_reason']) && is_string($attributes['native_finish_reason'])
                 ? $attributes['native_finish_reason']
                 : null,
+            extras: $extras,
         );
     }
 
@@ -63,6 +74,6 @@ final class ChatChoice
             $data['native_finish_reason'] = $this->nativeFinishReason;
         }
 
-        return $data;
+        return [...$data, ...$this->extras];
     }
 }

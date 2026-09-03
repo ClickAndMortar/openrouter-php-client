@@ -54,6 +54,8 @@ final class ApiKeyDetail
         public readonly ?string $updatedAt,
         public readonly ?string $creatorUserId,
         public readonly ?string $expiresAt,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -62,6 +64,33 @@ final class ApiKeyDetail
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'hash',
+            'name',
+            'label',
+            'disabled',
+            'limit',
+            'limit_remaining',
+            'limit_reset',
+            'include_byok_in_limit',
+            'usage',
+            'usage_daily',
+            'usage_weekly',
+            'usage_monthly',
+            'byok_usage',
+            'byok_usage_daily',
+            'byok_usage_weekly',
+            'byok_usage_monthly',
+            'created_at',
+            'updated_at',
+            'creator_user_id',
+            'expires_at',
+            'is_free_tier',
+            'is_management_key',
+            'is_provisioning_key',
+            'rate_limit',
+        ]));
+
         $float = static fn (mixed $v): float => is_numeric($v) ? (float) $v : 0.0;
         $str = static fn (mixed $v): string => is_string($v) ? $v : '';
         $nullableStr = static fn (mixed $v): ?string => is_string($v) ? $v : null;
@@ -87,6 +116,7 @@ final class ApiKeyDetail
             updatedAt: $nullableStr($attributes['updated_at'] ?? null),
             creatorUserId: $nullableStr($attributes['creator_user_id'] ?? null),
             expiresAt: $nullableStr($attributes['expires_at'] ?? null),
+            extras: $extras,
         );
     }
 
@@ -95,7 +125,7 @@ final class ApiKeyDetail
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'hash' => $this->hash,
             'name' => $this->name,
             'label' => $this->label,
@@ -117,5 +147,7 @@ final class ApiKeyDetail
             'creator_user_id' => $this->creatorUserId,
             'expires_at' => $this->expiresAt,
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

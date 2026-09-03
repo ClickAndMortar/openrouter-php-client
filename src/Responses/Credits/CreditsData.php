@@ -12,6 +12,8 @@ final class CreditsData
     private function __construct(
         public readonly float $totalCredits,
         public readonly float $totalUsage,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -20,9 +22,15 @@ final class CreditsData
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'total_credits',
+            'total_usage',
+        ]));
+
         return new self(
             totalCredits: (float) $attributes['total_credits'],
             totalUsage: (float) $attributes['total_usage'],
+            extras: $extras,
         );
     }
 
@@ -31,9 +39,11 @@ final class CreditsData
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'total_credits' => $this->totalCredits,
             'total_usage' => $this->totalUsage,
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

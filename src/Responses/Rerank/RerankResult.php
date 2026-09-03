@@ -19,6 +19,8 @@ final class RerankResult
         public readonly int $index,
         public readonly float $relevanceScore,
         public readonly RerankDocument $document,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -27,6 +29,12 @@ final class RerankResult
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'index',
+            'relevance_score',
+            'document',
+        ]));
+
         $document = isset($attributes['document']) && is_array($attributes['document'])
             ? RerankDocument::from($attributes['document'])
             : RerankDocument::from([]);
@@ -37,6 +45,7 @@ final class RerankResult
                 ? (float) $attributes['relevance_score']
                 : 0.0,
             document: $document,
+            extras: $extras,
         );
     }
 
@@ -45,10 +54,12 @@ final class RerankResult
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'index' => $this->index,
             'relevance_score' => $this->relevanceScore,
             'document' => $this->document->toArray(),
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

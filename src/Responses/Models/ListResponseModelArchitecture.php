@@ -25,6 +25,8 @@ final class ListResponseModelArchitecture
         public readonly array $outputModalities,
         public readonly ?string $instructType,
         public readonly ?string $tokenizer,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -33,12 +35,21 @@ final class ListResponseModelArchitecture
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'modality',
+            'input_modalities',
+            'output_modalities',
+            'instruct_type',
+            'tokenizer',
+        ]));
+
         return new self(
             modality: $attributes['modality'] ?? null,
             inputModalities: $attributes['input_modalities'],
             outputModalities: $attributes['output_modalities'],
             instructType: $attributes['instruct_type'] ?? null,
             tokenizer: $attributes['tokenizer'] ?? null,
+            extras: $extras,
         );
     }
 
@@ -47,12 +58,14 @@ final class ListResponseModelArchitecture
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'modality' => $this->modality,
             'input_modalities' => $this->inputModalities,
             'output_modalities' => $this->outputModalities,
             'instruct_type' => $this->instructType,
             'tokenizer' => $this->tokenizer,
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

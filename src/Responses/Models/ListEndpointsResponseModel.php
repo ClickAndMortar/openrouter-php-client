@@ -29,6 +29,8 @@ final class ListEndpointsResponseModel
         public readonly string $description,
         public readonly ListResponseModelArchitecture $architecture,
         public readonly array $endpoints,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -37,6 +39,15 @@ final class ListEndpointsResponseModel
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'id',
+            'name',
+            'created',
+            'description',
+            'architecture',
+            'endpoints',
+        ]));
+
         return new self(
             id: $attributes['id'],
             name: $attributes['name'],
@@ -47,6 +58,7 @@ final class ListEndpointsResponseModel
                 static fn (array $endpoint): ListEndpointsResponseEndpoint => ListEndpointsResponseEndpoint::from($endpoint),
                 $attributes['endpoints'],
             ),
+            extras: $extras,
         );
     }
 
@@ -55,7 +67,7 @@ final class ListEndpointsResponseModel
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'name' => $this->name,
             'created' => $this->created,
@@ -66,5 +78,7 @@ final class ListEndpointsResponseModel
                 $this->endpoints,
             ),
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

@@ -33,6 +33,8 @@ final class ActivityItem
         public readonly int $promptTokens,
         public readonly int $completionTokens,
         public readonly int $reasoningTokens,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -41,6 +43,20 @@ final class ActivityItem
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'date',
+            'model',
+            'model_permaslug',
+            'endpoint_id',
+            'provider_name',
+            'usage',
+            'byok_usage_inference',
+            'requests',
+            'prompt_tokens',
+            'completion_tokens',
+            'reasoning_tokens',
+        ]));
+
         return new self(
             date: $attributes['date'],
             model: $attributes['model'],
@@ -53,6 +69,7 @@ final class ActivityItem
             promptTokens: $attributes['prompt_tokens'],
             completionTokens: $attributes['completion_tokens'],
             reasoningTokens: $attributes['reasoning_tokens'],
+            extras: $extras,
         );
     }
 
@@ -61,7 +78,7 @@ final class ActivityItem
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'date' => $this->date,
             'model' => $this->model,
             'model_permaslug' => $this->modelPermaslug,
@@ -74,5 +91,7 @@ final class ActivityItem
             'completion_tokens' => $this->completionTokens,
             'reasoning_tokens' => $this->reasoningTokens,
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

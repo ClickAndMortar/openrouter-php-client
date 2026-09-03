@@ -53,6 +53,8 @@ final class ListEndpointsResponseEndpoint
         public readonly ?ListEndpointsResponsePercentileStats $latencyLast30m,
         public readonly ?ListEndpointsResponsePercentileStats $throughputLast30m,
         public readonly int|string|null $status,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -61,6 +63,27 @@ final class ListEndpointsResponseEndpoint
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'name',
+            'model_name',
+            'context_length',
+            'pricing',
+            'provider_name',
+            'tag',
+            'quantization',
+            'max_completion_tokens',
+            'max_prompt_tokens',
+            'supported_parameters',
+            'uptime_last_30m',
+            'uptime_last_5m',
+            'uptime_last_1d',
+            'supports_implicit_caching',
+            'latency_last_30m',
+            'throughput_last_30m',
+            'status',
+            'model_id',
+        ]));
+
         return new self(
             name: $attributes['name'],
             modelId: $attributes['model_id'] ?? null,
@@ -84,6 +107,7 @@ final class ListEndpointsResponseEndpoint
                 ? ListEndpointsResponsePercentileStats::from($attributes['throughput_last_30m'])
                 : null,
             status: $attributes['status'] ?? null,
+            extras: $extras,
         );
     }
 
@@ -117,6 +141,6 @@ final class ListEndpointsResponseEndpoint
         }
 
         /** @var ListEndpointsResponseEndpointType $data */
-        return $data;
+        return [...$data, ...$this->extras];
     }
 }

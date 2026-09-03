@@ -31,6 +31,8 @@ final class CreateResponseUsage
         public readonly ?float $cost,
         public readonly ?CostDetails $costDetails,
         public readonly ?bool $isByok,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -39,6 +41,17 @@ final class CreateResponseUsage
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'input_tokens',
+            'input_tokens_details',
+            'output_tokens',
+            'output_tokens_details',
+            'total_tokens',
+            'cost',
+            'cost_details',
+            'is_byok',
+        ]));
+
         $costDetails = null;
         if (isset($attributes['cost_details']) && is_array($attributes['cost_details'])) {
             $costDetails = CostDetails::from($attributes['cost_details']);
@@ -53,6 +66,7 @@ final class CreateResponseUsage
             cost: $attributes['cost'] ?? null,
             costDetails: $costDetails,
             isByok: $attributes['is_byok'] ?? null,
+            extras: $extras,
         );
     }
 
@@ -82,6 +96,6 @@ final class CreateResponseUsage
         }
 
         /** @var CreateResponseUsageType $data */
-        return $data;
+        return [...$data, ...$this->extras];
     }
 }

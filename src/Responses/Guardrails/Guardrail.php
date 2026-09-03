@@ -27,6 +27,8 @@ final class Guardrail
         public readonly ?array $allowedProviders,
         public readonly ?array $ignoredProviders,
         public readonly ?string $updatedAt,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -35,6 +37,20 @@ final class Guardrail
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'id',
+            'name',
+            'created_at',
+            'description',
+            'limit_usd',
+            'reset_interval',
+            'enforce_zdr',
+            'allowed_models',
+            'allowed_providers',
+            'ignored_providers',
+            'updated_at',
+        ]));
+
         $str = static fn (mixed $v): string => is_string($v) ? $v : '';
         $nullableStr = static fn (mixed $v): ?string => is_string($v) ? $v : null;
         $nullableFloat = static fn (mixed $v): ?float => is_numeric($v) ? (float) $v : null;
@@ -65,6 +81,7 @@ final class Guardrail
             allowedProviders: $stringList($attributes['allowed_providers'] ?? null),
             ignoredProviders: $stringList($attributes['ignored_providers'] ?? null),
             updatedAt: $nullableStr($attributes['updated_at'] ?? null),
+            extras: $extras,
         );
     }
 
@@ -73,7 +90,7 @@ final class Guardrail
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'name' => $this->name,
             'created_at' => $this->createdAt,
@@ -86,5 +103,7 @@ final class Guardrail
             'ignored_providers' => $this->ignoredProviders,
             'updated_at' => $this->updatedAt,
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

@@ -41,6 +41,8 @@ final class ChatUsage
         public readonly ?float $cost,
         public readonly ?CostDetails $costDetails,
         public readonly ?bool $isByok,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -63,6 +65,17 @@ final class ChatUsage
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'prompt_tokens',
+            'completion_tokens',
+            'total_tokens',
+            'prompt_tokens_details',
+            'completion_tokens_details',
+            'cost',
+            'cost_details',
+            'is_byok',
+        ]));
+
         $costDetails = null;
         if (isset($attributes['cost_details']) && is_array($attributes['cost_details'])) {
             $costDetails = CostDetails::from($attributes['cost_details']);
@@ -81,6 +94,7 @@ final class ChatUsage
             cost: isset($attributes['cost']) ? (float) $attributes['cost'] : null,
             costDetails: $costDetails,
             isByok: isset($attributes['is_byok']) ? (bool) $attributes['is_byok'] : null,
+            extras: $extras,
         );
     }
 
@@ -115,6 +129,6 @@ final class ChatUsage
             $data['is_byok'] = $this->isByok;
         }
 
-        return $data;
+        return [...$data, ...$this->extras];
     }
 }

@@ -53,6 +53,8 @@ final class ListResponseModel
         public readonly ?string $expirationDate,
         public readonly ?string $huggingFaceId,
         public readonly ?array $links,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -61,6 +63,25 @@ final class ListResponseModel
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'id',
+            'canonical_slug',
+            'name',
+            'created',
+            'context_length',
+            'architecture',
+            'pricing',
+            'top_provider',
+            'supported_parameters',
+            'per_request_limits',
+            'default_parameters',
+            'knowledge_cutoff',
+            'expiration_date',
+            'links',
+            'description',
+            'hugging_face_id',
+        ]));
+
         return new self(
             id: $attributes['id'],
             canonicalSlug: $attributes['canonical_slug'],
@@ -78,6 +99,7 @@ final class ListResponseModel
             expirationDate: $attributes['expiration_date'] ?? null,
             huggingFaceId: $attributes['hugging_face_id'] ?? null,
             links: $attributes['links'] ?? null,
+            extras: $extras,
         );
     }
 
@@ -112,6 +134,6 @@ final class ListResponseModel
         }
 
         /** @var ListResponseModelType $data */
-        return $data;
+        return [...$data, ...$this->extras];
     }
 }

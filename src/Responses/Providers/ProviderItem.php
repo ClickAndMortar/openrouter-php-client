@@ -28,6 +28,8 @@ final class ProviderItem
         public readonly ?string $privacyPolicyUrl,
         public readonly ?string $termsOfServiceUrl,
         public readonly ?string $statusPageUrl,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -36,6 +38,16 @@ final class ProviderItem
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'slug',
+            'name',
+            'headquarters',
+            'datacenters',
+            'privacy_policy_url',
+            'terms_of_service_url',
+            'status_page_url',
+        ]));
+
         return new self(
             slug: $attributes['slug'],
             name: $attributes['name'],
@@ -44,6 +56,7 @@ final class ProviderItem
             privacyPolicyUrl: $attributes['privacy_policy_url'] ?? null,
             termsOfServiceUrl: $attributes['terms_of_service_url'] ?? null,
             statusPageUrl: $attributes['status_page_url'] ?? null,
+            extras: $extras,
         );
     }
 
@@ -52,7 +65,7 @@ final class ProviderItem
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'slug' => $this->slug,
             'name' => $this->name,
             'headquarters' => $this->headquarters,
@@ -61,5 +74,7 @@ final class ProviderItem
             'terms_of_service_url' => $this->termsOfServiceUrl,
             'status_page_url' => $this->statusPageUrl,
         ];
+
+        return [...$data, ...$this->extras];
     }
 }

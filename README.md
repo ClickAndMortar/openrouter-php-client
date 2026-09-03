@@ -839,6 +839,17 @@ try {
 
 Unknown discriminator values (new tool types, message roles, content parts, response formats, stream event types) hydrate to `Unknown*` fallbacks that preserve the raw payload - your code keeps working when OpenRouter ships new variants.
 
+Unknown **fields** are kept too. Every value object that models an API entity exposes an `$extras` array holding the keys this SDK does not have a typed accessor for yet, and re-emits them from `toArray()`:
+
+```php
+$model = $client->models()->list()->data[0];
+
+// Shipped by the API, not yet typed by this SDK:
+$benchmarks = $model->extras['benchmarks'] ?? null;
+```
+
+Requests have the same escape hatch: `CreateChatRequest` (and friends) take an `$extras` array that is merged into the request body, and `$client->chat()->send([...])` forwards a plain array untouched. You never have to wait for an SDK release to reach a new API parameter.
+
 ### Staying in sync with the API
 
 The OpenRouter spec this SDK targets is vendored at `openapi-openrouter.yaml`, and `api-coverage.json` records every upstream operation as either `covered` (a typed wrapper exists) or a reviewed `known_gaps` entry.

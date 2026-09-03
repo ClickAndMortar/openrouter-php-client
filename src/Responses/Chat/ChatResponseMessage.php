@@ -27,6 +27,8 @@ final class ChatResponseMessage
         public readonly ?array $images,
         public readonly ?ChatAudioOutput $audio,
         public readonly ?string $name,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -35,6 +37,18 @@ final class ChatResponseMessage
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'content',
+            'tool_calls',
+            'reasoning',
+            'reasoning_details',
+            'refusal',
+            'images',
+            'name',
+            'audio',
+            'role',
+        ]));
+
         $rawContent = $attributes['content'] ?? null;
         $content = null;
         if (is_string($rawContent)) {
@@ -70,6 +84,7 @@ final class ChatResponseMessage
                 ? ChatAudioOutput::from($attributes['audio'])
                 : null,
             name: isset($attributes['name']) && is_string($attributes['name']) ? $attributes['name'] : null,
+            extras: $extras,
         );
     }
 
@@ -102,6 +117,6 @@ final class ChatResponseMessage
             $data['audio'] = $this->audio->toArray();
         }
 
-        return $data;
+        return [...$data, ...$this->extras];
     }
 }

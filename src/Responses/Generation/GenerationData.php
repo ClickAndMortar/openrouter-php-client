@@ -90,6 +90,8 @@ final class GenerationData
         public readonly ?string $httpReferer,
         public readonly ?string $requestId,
         public readonly ?string $sessionId,
+        /** @var array<string, mixed> */
+        public readonly array $extras = [],
     ) {
     }
 
@@ -98,6 +100,47 @@ final class GenerationData
      */
     public static function from(array $attributes): self
     {
+        $extras = array_diff_key($attributes, array_flip([
+            'id',
+            'upstream_id',
+            'total_cost',
+            'cache_discount',
+            'upstream_inference_cost',
+            'created_at',
+            'model',
+            'app_id',
+            'streamed',
+            'cancelled',
+            'provider_name',
+            'latency',
+            'moderation_latency',
+            'generation_time',
+            'finish_reason',
+            'tokens_prompt',
+            'tokens_completion',
+            'native_tokens_prompt',
+            'native_tokens_completion',
+            'native_tokens_completion_images',
+            'native_tokens_reasoning',
+            'native_tokens_cached',
+            'num_media_prompt',
+            'num_input_audio_prompt',
+            'num_media_completion',
+            'num_search_results',
+            'origin',
+            'usage',
+            'is_byok',
+            'native_finish_reason',
+            'external_user',
+            'api_type',
+            'router',
+            'provider_responses',
+            'user_agent',
+            'http_referer',
+            'request_id',
+            'session_id',
+        ]));
+
         return new self(
             id: $attributes['id'],
             upstreamId: $attributes['upstream_id'],
@@ -137,6 +180,7 @@ final class GenerationData
             httpReferer: $attributes['http_referer'],
             requestId: $attributes['request_id'] ?? null,
             sessionId: $attributes['session_id'] ?? null,
+            extras: $extras,
         );
     }
 
@@ -145,7 +189,7 @@ final class GenerationData
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'upstream_id' => $this->upstreamId,
             'total_cost' => $this->totalCost,
@@ -185,5 +229,7 @@ final class GenerationData
             'request_id' => $this->requestId,
             'session_id' => $this->sessionId,
         ];
+
+        return [...$data, ...$this->extras];
     }
 }
