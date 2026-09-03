@@ -13,7 +13,7 @@ use OpenRouter\Responses\Meta\MetaInformation;
 /**
  * @phpstan-import-type ListResponseModelType from ListResponseModel
  *
- * @phpstan-type ListResponseType array{data: array<int, ListResponseModelType>}
+ * @phpstan-type ListResponseType array{data: array<int, ListResponseModelType>, total_count?: int, links?: array{next: string|null}}
  *
  * @implements ResponseContract<ListResponseType>
  */
@@ -25,9 +25,13 @@ final class ListResponse implements ResponseContract, ResponseHasMetaInformation
 
     /**
      * @param  array<int, ListResponseModel>  $data
+     * @param  int|null  $totalCount  Total models matching the query across all pages.
+     * @param  string|null  $nextPage  URL of the next page, or null on the last page.
      */
     private function __construct(
         public readonly array $data,
+        public readonly ?int $totalCount,
+        public readonly ?string $nextPage,
         private readonly MetaInformation $meta,
     ) {
     }
@@ -42,7 +46,16 @@ final class ListResponse implements ResponseContract, ResponseHasMetaInformation
             $attributes['data'],
         );
 
-        return new self($models, $meta);
+        $links = isset($attributes['links']) && is_array($attributes['links']) ? $attributes['links'] : [];
+
+        return new self(
+            $models,
+            isset($attributes['total_count']) && is_int($attributes['total_count'])
+                ? $attributes['total_count']
+                : null,
+            isset($links['next']) && is_string($links['next']) ? $links['next'] : null,
+            $meta,
+        );
     }
 
     /**
@@ -50,11 +63,19 @@ final class ListResponse implements ResponseContract, ResponseHasMetaInformation
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'data' => array_map(
                 static fn (ListResponseModel $model): array => $model->toArray(),
                 $this->data,
             ),
         ];
+
+        // `total_count` and `links` are required together upstream; older payloads have neither.
+        if ($this->totalCount !== null) {
+            $data['total_count'] = $this->totalCount;
+            $data['links'] = ['next' => $this->nextPage];
+        }
+
+        return $data;
     }
 }

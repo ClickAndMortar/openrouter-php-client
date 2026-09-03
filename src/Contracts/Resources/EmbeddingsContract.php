@@ -28,5 +28,5 @@ interface EmbeddingsContract
      *
      * @see https://openrouter.ai/docs/api-reference/embeddings
      */
-    public function listModels(): ListResponse;
+    public function listModels(?int $limit = null, ?int $offset = null): ListResponse;
 }

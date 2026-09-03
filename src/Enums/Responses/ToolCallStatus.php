@@ -10,6 +10,7 @@ namespace OpenRouter\Enums\Responses;
 enum ToolCallStatus: string
 {
     case InProgress = 'in_progress';
+    case Interpreting = 'interpreting';
     case Completed = 'completed';
     case Incomplete = 'incomplete';
 

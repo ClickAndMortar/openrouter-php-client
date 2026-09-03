@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OpenRouter\Tests\Unit\Enums;
 
+use OpenRouter\Enums\Messages\MessagesStopReason;
 use OpenRouter\Enums\Responses\MessageRole;
 use OpenRouter\Enums\Responses\OutputModality;
 use OpenRouter\Enums\Responses\ReasoningEffort;
@@ -21,13 +22,14 @@ final class DomainEnumsTest extends TestCase
 {
     public function testServiceTierValues(): void
     {
-        $this->assertSame(['auto', 'default', 'flex', 'priority', 'scale'], ServiceTier::values());
+        $this->assertSame(['auto', 'default', 'fast', 'flex', 'priority', 'scale'], ServiceTier::values());
         $this->assertSame('default', ServiceTier::Default_->value);
+        $this->assertSame('fast', ServiceTier::Fast->value);
     }
 
     public function testReasoningEffortValues(): void
     {
-        $this->assertSame(['xhigh', 'high', 'medium', 'low', 'minimal', 'none'], ReasoningEffort::values());
+        $this->assertSame(['max', 'xhigh', 'high', 'medium', 'low', 'minimal', 'none'], ReasoningEffort::values());
     }
 
     public function testReasoningSummaryVerbosityValues(): void
@@ -61,7 +63,10 @@ final class DomainEnumsTest extends TestCase
 
     public function testToolCallStatusValues(): void
     {
-        $this->assertSame(['in_progress', 'completed', 'incomplete'], ToolCallStatus::values());
+        $this->assertSame(
+            ['in_progress', 'interpreting', 'completed', 'incomplete'],
+            ToolCallStatus::values(),
+        );
     }
 
     public function testWebSearchEngineValues(): void
@@ -88,6 +93,23 @@ final class DomainEnumsTest extends TestCase
     public function testImageQualityValues(): void
     {
         $this->assertSame(['low', 'medium', 'high', 'auto'], ImageQuality::values());
+    }
+
+    public function testMessagesStopReasonValues(): void
+    {
+        $this->assertSame(
+            [
+                'end_turn',
+                'max_tokens',
+                'model_context_window_exceeded',
+                'stop_sequence',
+                'tool_use',
+                'pause_turn',
+                'refusal',
+                'compaction',
+            ],
+            MessagesStopReason::values(),
+        );
     }
 
     public function testTryFromUnknownValue(): void

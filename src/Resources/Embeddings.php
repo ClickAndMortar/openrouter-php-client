@@ -44,9 +44,14 @@ final class Embeddings implements EmbeddingsContract
      *
      * @see https://openrouter.ai/docs/api-reference/embeddings
      */
-    public function listModels(): ListResponse
+    public function listModels(?int $limit = null, ?int $offset = null): ListResponse
     {
-        $payload = Payload::list('embeddings/models');
+        $query = array_filter(
+            ['limit' => $limit, 'offset' => $offset],
+            static fn (mixed $value): bool => $value !== null,
+        );
+
+        $payload = Payload::list('embeddings/models', $query);
 
         $response = $this->transporter->requestObject($payload);
 

@@ -9,6 +9,7 @@ namespace OpenRouter\Enums\Responses;
  */
 enum ReasoningEffort: string
 {
+    case Max = 'max';
     case Xhigh = 'xhigh';
     case High = 'high';
     case Medium = 'medium';

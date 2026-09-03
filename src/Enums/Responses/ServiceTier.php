@@ -11,6 +11,7 @@ enum ServiceTier: string
 {
     case Auto = 'auto';
     case Default_ = 'default';
+    case Fast = 'fast';
     case Flex = 'flex';
     case Priority = 'priority';
     case Scale = 'scale';

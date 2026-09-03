@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OpenRouter\ValueObjects\Chat;
 
 use OpenRouter\Enums\Responses\OutputModality;
+use OpenRouter\Enums\Responses\ReasoningEffort;
 use OpenRouter\Enums\Responses\ServiceTier;
 use OpenRouter\Exceptions\InvalidArgumentException;
 use OpenRouter\ValueObjects\Chat\Config\ChatDebugOptions;
@@ -56,6 +57,9 @@ final class CreateChatRequest
      * @param  array<string, mixed>|null  $imageConfig
      * @param  array<string, mixed>|null  $metadata
      * @param  string|list<string>|null  $stop
+     * @param  array<string, mixed>|null  $prediction
+     * @param  array<string, mixed>|null  $promptCacheOptions
+     * @param  list<array<string, mixed>>|null  $stopServerToolsWhen
      * @param  array<string, mixed>  $extras
      */
     public function __construct(
@@ -92,6 +96,15 @@ final class CreateChatRequest
         public readonly ?array $plugins = null,
         public readonly mixed $trace = null,
         public readonly ?string $route = null,
+        public readonly ?int $topK = null,
+        public readonly ?float $minP = null,
+        public readonly ?float $topA = null,
+        public readonly ?float $repetitionPenalty = null,
+        public readonly ?ReasoningEffort $reasoningEffort = null,
+        public readonly ?array $prediction = null,
+        public readonly ?string $promptCacheKey = null,
+        public readonly ?array $promptCacheOptions = null,
+        public readonly ?array $stopServerToolsWhen = null,
         public readonly array $extras = [],
     ) {
         if ($this->messages === []) {
@@ -284,6 +297,10 @@ final class CreateChatRequest
             $data['service_tier'] = $this->serviceTier->value;
         }
 
+        if ($this->reasoningEffort !== null) {
+            $data['reasoning_effort'] = $this->reasoningEffort->value;
+        }
+
         if ($this->stop !== null) {
             $data['stop'] = $this->stop;
         }
@@ -306,6 +323,14 @@ final class CreateChatRequest
             'metadata' => $this->metadata,
             'session_id' => $this->sessionId,
             'route' => $this->route,
+            'top_k' => $this->topK,
+            'min_p' => $this->minP,
+            'top_a' => $this->topA,
+            'repetition_penalty' => $this->repetitionPenalty,
+            'prediction' => $this->prediction,
+            'prompt_cache_key' => $this->promptCacheKey,
+            'prompt_cache_options' => $this->promptCacheOptions,
+            'stop_server_tools_when' => $this->stopServerToolsWhen,
         ];
 
         foreach ($optional as $key => $value) {

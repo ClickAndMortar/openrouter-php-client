@@ -14,6 +14,7 @@ enum MessagesStopReason: string
 {
     case EndTurn = 'end_turn';
     case MaxTokens = 'max_tokens';
+    case ModelContextWindowExceeded = 'model_context_window_exceeded';
     case StopSequence = 'stop_sequence';
     case ToolUse = 'tool_use';
     case PauseTurn = 'pause_turn';

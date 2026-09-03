@@ -108,6 +108,21 @@ final class EmbeddingsTest extends TestCase
         new CreateEmbeddingsRequest(input: '', model: 'openai/text-embedding-3-small');
     }
 
+    public function testListModelsSupportsPaginationParameters(): void
+    {
+        $http = new RecordingHttpClient();
+        $http->enqueueJson(EmbeddingsModelsListFixture::ATTRIBUTES);
+
+        $client = (new Factory())->withApiKey('sk-or-test')->withHttpClient($http)->make();
+
+        $client->embeddings()->listModels(limit: 20, offset: 40);
+
+        $query = [];
+        parse_str($http->lastRequest()->getUri()->getQuery(), $query);
+
+        $this->assertSame(['limit' => '20', 'offset' => '40'], $query);
+    }
+
     public function testListModelsHitsEmbeddingsModelsEndpointAsGet(): void
     {
         $http = new RecordingHttpClient();

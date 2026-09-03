@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OpenRouter\Tests\Unit\ValueObjects\Chat;
 
 use OpenRouter\Enums\Responses\OutputModality;
+use OpenRouter\Enums\Responses\ReasoningEffort;
 use OpenRouter\Enums\Responses\ServiceTier;
 use OpenRouter\Exceptions\InvalidArgumentException;
 use OpenRouter\ValueObjects\Chat\Config\ChatReasoningConfig;
@@ -71,6 +72,80 @@ final class CreateChatRequestTest extends TestCase
 
         $this->assertSame(['messages', 'model'], array_keys($array));
         $this->assertSame('openai/gpt-4o', $array['model']);
+    }
+
+    public function testToArraySerializesAdditionalSamplingParameters(): void
+    {
+        $req = new CreateChatRequest(
+            messages: [new UserMessage('hi')],
+            topK: 40,
+            minP: 0.1,
+            topA: 0.2,
+            repetitionPenalty: 1.1,
+        );
+
+        $array = $req->toArray();
+
+        $this->assertSame(40, $array['top_k']);
+        $this->assertSame(0.1, $array['min_p']);
+        $this->assertSame(0.2, $array['top_a']);
+        $this->assertSame(1.1, $array['repetition_penalty']);
+    }
+
+    public function testToArraySerializesReasoningEffortShorthand(): void
+    {
+        $req = new CreateChatRequest(
+            messages: [new UserMessage('hi')],
+            reasoningEffort: ReasoningEffort::Max,
+        );
+
+        $this->assertSame('max', $req->toArray()['reasoning_effort']);
+    }
+
+    public function testToArraySerializesPrediction(): void
+    {
+        $req = new CreateChatRequest(
+            messages: [new UserMessage('hi')],
+            prediction: ['type' => 'content', 'content' => 'Expected response'],
+        );
+
+        $this->assertSame(
+            ['type' => 'content', 'content' => 'Expected response'],
+            $req->toArray()['prediction'],
+        );
+    }
+
+    public function testToArraySerializesPromptCacheControls(): void
+    {
+        $req = new CreateChatRequest(
+            messages: [new UserMessage('hi')],
+            promptCacheKey: 'shared-prefix-v1',
+            promptCacheOptions: ['mode' => 'explicit', 'ttl' => '30m'],
+        );
+
+        $array = $req->toArray();
+
+        $this->assertSame('shared-prefix-v1', $array['prompt_cache_key']);
+        $this->assertSame(['mode' => 'explicit', 'ttl' => '30m'], $array['prompt_cache_options']);
+    }
+
+    public function testToArraySerializesStopServerToolsWhenConditions(): void
+    {
+        $req = new CreateChatRequest(
+            messages: [new UserMessage('hi')],
+            stopServerToolsWhen: [
+                ['type' => 'step_count_is', 'step_count' => 5],
+                ['type' => 'max_cost', 'max_cost_in_dollars' => 0.5],
+            ],
+        );
+
+        $this->assertSame(
+            [
+                ['type' => 'step_count_is', 'step_count' => 5],
+                ['type' => 'max_cost', 'max_cost_in_dollars' => 0.5],
+            ],
+            $req->toArray()['stop_server_tools_when'],
+        );
     }
 
     public function testToArraySerializesTypedNestedObjects(): void

@@ -99,6 +99,31 @@ $response = $client->transporter()->requestObject(
 $members = $response->data();
 ```
 
+### Filtering and paginating models
+
+`GET /models` accepts far more query parameters than it used to. The common ones are named arguments; everything else goes through `$filters`, and the response carries the pagination cursor:
+
+```php
+$page = $client->models()->list(
+    category: 'programming',
+    filters: [
+        'limit' => 50,
+        'offset' => 0,
+        'q' => 'claude',
+        'sort' => 'newest',
+        'max_price' => 0.5,
+        'min_intelligence_index' => 60,
+        'providers' => 'anthropic',
+        'zdr' => 'true',
+    ],
+);
+
+echo $page->totalCount;  // total matches across all pages
+echo $page->nextPage;    // URL of the next page, or null on the last one
+```
+
+`$client->models()->listForUser(limit: 25, offset: 0)` and `$client->embeddings()->listModels(limit: 25, offset: 0)` paginate the same way.
+
 ## Chat completions
 
 ### Typed requests
@@ -127,6 +152,39 @@ $result = $client->chat()->send(new CreateChatRequest(
 $result->choices[0]->message->content;
 $result->usage->promptTokens;
 $result->usage->cost;
+```
+
+#### Sampling, caching and agent-loop controls
+
+```php
+use OpenRouter\Enums\Responses\ReasoningEffort;
+
+new CreateChatRequest(
+    model: 'openai/gpt-4o',
+    messages: [new UserMessage('Refactor this module.')],
+
+    // OpenRouter sampling parameters
+    topK: 40,
+    minP: 0.1,
+    topA: 0.2,
+    repetitionPenalty: 1.1,
+
+    // Shorthand for reasoning.effort
+    reasoningEffort: ReasoningEffort::Max,
+
+    // Speculative decoding when much of the answer is known up front
+    prediction: ['type' => 'content', 'content' => $currentFileContents],
+
+    // Prompt caching
+    promptCacheKey: 'module-refactor-v1',
+    promptCacheOptions: ['mode' => 'explicit', 'ttl' => '30m'],
+
+    // Halt the server-tool agent loop (OR logic across conditions)
+    stopServerToolsWhen: [
+        ['type' => 'step_count_is', 'step_count' => 5],
+        ['type' => 'max_cost', 'max_cost_in_dollars' => 0.5],
+    ],
+);
 ```
 
 ### Streaming

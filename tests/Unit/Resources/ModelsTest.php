@@ -32,6 +32,80 @@ final class ModelsTest extends TestCase
         $this->assertSame('', (string) $request->getBody());
     }
 
+    public function testListPassesFiltersAsQueryParameters(): void
+    {
+        $http = new RecordingHttpClient();
+        $http->enqueueJson(ModelsListFixture::ATTRIBUTES);
+
+        $client = (new Factory())->withApiKey('sk-or-test')->withHttpClient($http)->make();
+
+        $client->models()->list(
+            category: 'programming',
+            filters: [
+                'limit' => 50,
+                'offset' => 100,
+                'q' => 'claude',
+                'sort' => 'newest',
+                'max_price' => 0.5,
+                'zdr' => 'true',
+            ],
+        );
+
+        $query = [];
+        parse_str($http->lastRequest()->getUri()->getQuery(), $query);
+
+        $this->assertSame('programming', $query['category']);
+        $this->assertSame('50', $query['limit']);
+        $this->assertSame('100', $query['offset']);
+        $this->assertSame('claude', $query['q']);
+        $this->assertSame('newest', $query['sort']);
+        $this->assertSame('0.5', $query['max_price']);
+        $this->assertSame('true', $query['zdr']);
+    }
+
+    public function testListOmitsNullFilters(): void
+    {
+        $http = new RecordingHttpClient();
+        $http->enqueueJson(ModelsListFixture::ATTRIBUTES);
+
+        $client = (new Factory())->withApiKey('sk-or-test')->withHttpClient($http)->make();
+
+        $client->models()->list(filters: ['limit' => 10, 'q' => null]);
+
+        $query = [];
+        parse_str($http->lastRequest()->getUri()->getQuery(), $query);
+
+        $this->assertSame(['limit' => '10'], $query);
+    }
+
+    public function testListExposesPaginationOnTheResponse(): void
+    {
+        $http = new RecordingHttpClient();
+        $http->enqueueJson(ModelsListFixture::ATTRIBUTES);
+
+        $client = (new Factory())->withApiKey('sk-or-test')->withHttpClient($http)->make();
+
+        $response = $client->models()->list();
+
+        $this->assertSame(517, $response->totalCount);
+        $this->assertSame('/api/v1/models?offset=500&limit=500', $response->nextPage);
+    }
+
+    public function testListForUserSupportsPaginationParameters(): void
+    {
+        $http = new RecordingHttpClient();
+        $http->enqueueJson(ModelsListForUserFixture::ATTRIBUTES);
+
+        $client = (new Factory())->withApiKey('sk-or-test')->withHttpClient($http)->make();
+
+        $client->models()->listForUser(limit: 25, offset: 50, outputModalities: 'text');
+
+        $query = [];
+        parse_str($http->lastRequest()->getUri()->getQuery(), $query);
+
+        $this->assertSame(['limit' => '25', 'offset' => '50', 'output_modalities' => 'text'], $query);
+    }
+
     public function testListForUserReturnsTypedListResponse(): void
     {
         $http = new RecordingHttpClient();

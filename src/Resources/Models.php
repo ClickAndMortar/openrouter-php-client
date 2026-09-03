@@ -19,15 +19,20 @@ final class Models implements ModelsContract
      *
      * @see https://openrouter.ai/docs/api-reference/models#list-available-models
      */
-    public function list(?string $category = null, ?string $supportedParameters = null, ?string $outputModalities = null): ListResponse
-    {
+    public function list(
+        ?string $category = null,
+        ?string $supportedParameters = null,
+        ?string $outputModalities = null,
+        array $filters = [],
+    ): ListResponse {
         $query = array_filter(
             [
                 'category' => $category,
                 'supported_parameters' => $supportedParameters,
                 'output_modalities' => $outputModalities,
+                ...$filters,
             ],
-            static fn (?string $value): bool => $value !== null,
+            static fn (mixed $value): bool => $value !== null,
         );
 
         $payload = Payload::list('models', $query);
@@ -46,9 +51,21 @@ final class Models implements ModelsContract
      *
      * @see https://openrouter.ai/docs/api-reference/models#list-models-filtered-by-user-provider-preferences
      */
-    public function listForUser(): ListResponse
-    {
-        $payload = Payload::list('models/user');
+    public function listForUser(
+        ?int $limit = null,
+        ?int $offset = null,
+        ?string $outputModalities = null,
+    ): ListResponse {
+        $query = array_filter(
+            [
+                'limit' => $limit,
+                'offset' => $offset,
+                'output_modalities' => $outputModalities,
+            ],
+            static fn (mixed $value): bool => $value !== null,
+        );
+
+        $payload = Payload::list('models/user', $query);
 
         $response = $this->transporter->requestObject($payload);
 

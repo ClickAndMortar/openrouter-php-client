@@ -6,6 +6,7 @@ namespace OpenRouter\Tests\Unit\Responses\Models;
 
 use OpenRouter\Responses\Meta\MetaInformation;
 use OpenRouter\Responses\Models\ListResponse;
+use OpenRouter\Tests\Fixtures\ModelsListFixture;
 use OpenRouter\Tests\Fixtures\ModelsListForUserFixture;
 use PHPUnit\Framework\TestCase;
 
@@ -29,6 +30,43 @@ final class ListResponseTest extends TestCase
         $this->assertSame(ModelsListForUserFixture::ATTRIBUTES['data'][0]['name'], $data['data'][0]['name']);
         $this->assertSame(ModelsListForUserFixture::ATTRIBUTES['data'][0]['architecture']['modality'], $data['data'][0]['architecture']['modality']);
         $this->assertSame(ModelsListForUserFixture::ATTRIBUTES['data'][0]['pricing']['prompt'], $data['data'][0]['pricing']['prompt']);
+    }
+
+    public function testFromExposesPaginationMetadata(): void
+    {
+        $response = ListResponse::from(ModelsListFixture::ATTRIBUTES, MetaInformation::from([]));
+
+        $this->assertSame(517, $response->totalCount);
+        $this->assertSame('/api/v1/models?offset=500&limit=500', $response->nextPage);
+    }
+
+    public function testPaginationMetadataIsNullWhenAbsent(): void
+    {
+        $response = ListResponse::from(['data' => []], MetaInformation::from([]));
+
+        $this->assertNull($response->totalCount);
+        $this->assertNull($response->nextPage);
+    }
+
+    public function testNextPageIsNullOnLastPage(): void
+    {
+        $response = ListResponse::from(
+            ['data' => [], 'total_count' => 12, 'links' => ['next' => null]],
+            MetaInformation::from([]),
+        );
+
+        $this->assertSame(12, $response->totalCount);
+        $this->assertNull($response->nextPage);
+    }
+
+    public function testToArrayIncludesPaginationMetadata(): void
+    {
+        $response = ListResponse::from(ModelsListFixture::ATTRIBUTES, MetaInformation::from([]));
+
+        $data = $response->toArray();
+
+        $this->assertSame(517, $data['total_count']);
+        $this->assertSame(['next' => '/api/v1/models?offset=500&limit=500'], $data['links']);
     }
 
     public function testArrayAccessWorks(): void

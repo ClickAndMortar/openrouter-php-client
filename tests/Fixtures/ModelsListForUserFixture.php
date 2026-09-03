@@ -10,7 +10,7 @@ final class ModelsListForUserFixture
      * Mirrors the `ModelsListResponse` example from openapi-openrouter.yaml (line 7963+)
      * for the `/models/user` endpoint.
      *
-     * @var array{data: array<int, array<string, mixed>>}
+     * @var array{data: array<int, array<string, mixed>>, total_count: int, links: array{next: string|null}}
      */
     public const ATTRIBUTES = [
         'data' => [
@@ -47,5 +47,7 @@ final class ModelsListForUserFixture
                 'links' => ['details' => '/api/v1/models/openai/gpt-4/endpoints'],
             ],
         ],
+        'total_count' => 517,
+        'links' => ['next' => '/api/v1/models?offset=500&limit=500'],
     ];
 }
