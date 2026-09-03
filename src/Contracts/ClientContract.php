@@ -7,6 +7,7 @@ namespace OpenRouter\Contracts;
 use OpenRouter\Contracts\Resources\ActivityContract;
 use OpenRouter\Contracts\Resources\AudioContract;
 use OpenRouter\Contracts\Resources\AuthContract;
+use OpenRouter\Contracts\Resources\ByokContract;
 use OpenRouter\Contracts\Resources\ChatContract;
 use OpenRouter\Contracts\Resources\ContainersContract;
 use OpenRouter\Contracts\Resources\CreditsContract;
@@ -20,10 +21,12 @@ use OpenRouter\Contracts\Resources\KeysContract;
 use OpenRouter\Contracts\Resources\MessagesContract;
 use OpenRouter\Contracts\Resources\ModelsContract;
 use OpenRouter\Contracts\Resources\OrganizationContract;
+use OpenRouter\Contracts\Resources\PresetsContract;
 use OpenRouter\Contracts\Resources\ProvidersContract;
 use OpenRouter\Contracts\Resources\RerankContract;
 use OpenRouter\Contracts\Resources\ResponsesContract;
 use OpenRouter\Contracts\Resources\VideosContract;
+use OpenRouter\Contracts\Resources\WorkspacesContract;
 
 interface ClientContract
 {
@@ -46,6 +49,21 @@ interface ClientContract
      * Asynchronous video generation: submit, poll, download.
      */
     public function videos(): VideosContract;
+
+    /**
+     * Bring-your-own-key provider credentials.
+     */
+    public function byok(): ByokContract;
+
+    /**
+     * Saved inference configurations, addressed by slug.
+     */
+    public function presets(): PresetsContract;
+
+    /**
+     * Workspaces: scoped containers for keys, guardrails, budgets and members.
+     */
+    public function workspaces(): WorkspacesContract;
 
     public function transporter(): TransporterContract;
 

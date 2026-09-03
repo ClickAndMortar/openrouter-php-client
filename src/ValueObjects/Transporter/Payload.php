@@ -72,6 +72,14 @@ final class Payload
     }
 
     /**
+     * @param  array<string, mixed>  $parameters
+     */
+    public static function put(string $resource, array $parameters): self
+    {
+        return new self(ContentType::JSON, Method::PUT, ResourceUri::create($resource), $parameters);
+    }
+
+    /**
      * Builds a `multipart/form-data` upload.
      *
      * `$fields` maps each form field to an {@see UploadedFile}, a scalar, or a

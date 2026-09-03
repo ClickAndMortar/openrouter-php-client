@@ -9,6 +9,7 @@ use OpenRouter\Contracts\TransporterContract;
 use OpenRouter\Resources\Activity;
 use OpenRouter\Resources\Audio;
 use OpenRouter\Resources\Auth;
+use OpenRouter\Resources\Byok;
 use OpenRouter\Resources\Chat;
 use OpenRouter\Resources\Containers;
 use OpenRouter\Resources\Credits;
@@ -22,10 +23,12 @@ use OpenRouter\Resources\Keys;
 use OpenRouter\Resources\Messages;
 use OpenRouter\Resources\Models;
 use OpenRouter\Resources\Organization;
+use OpenRouter\Resources\Presets;
 use OpenRouter\Resources\Providers;
 use OpenRouter\Resources\Rerank;
 use OpenRouter\Resources\Responses;
 use OpenRouter\Resources\Videos;
+use OpenRouter\Resources\Workspaces;
 
 final class Client implements ClientContract
 {
@@ -131,6 +134,21 @@ final class Client implements ClientContract
     public function videos(): Videos
     {
         return new Videos($this->transporter);
+    }
+
+    public function byok(): Byok
+    {
+        return new Byok($this->transporter);
+    }
+
+    public function presets(): Presets
+    {
+        return new Presets($this->transporter);
+    }
+
+    public function workspaces(): Workspaces
+    {
+        return new Workspaces($this->transporter);
     }
 
     public function transporter(): TransporterContract

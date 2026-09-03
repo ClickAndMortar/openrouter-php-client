@@ -80,6 +80,22 @@ Status of every endpoint in the OpenRouter OpenAPI spec:
 | `/containers/{id}/files/{file_id}`            | GET                  |   ✅    | `$client->containers()->retrieveFile($containerId, $fileId)` |
 | `/containers/{id}/files/{file_id}/content`    | GET                  |   ✅    | `$client->containers()->downloadFile($containerId, $fileId)` |
 | `/containers/{id}/files/{file_id}/promote`    | POST                 |   ✅    | `$client->containers()->promoteFile($containerId, $fileId)` |
+| `/workspaces`                                 | GET / POST           |   ✅    | `$client->workspaces()->list(...)` / `create(...)`      |
+| `/workspaces/{id}`                            | GET / PATCH / DELETE |   ✅    | `$client->workspaces()->retrieve($id)` / `update(...)` / `delete($id)` |
+| `/workspaces/{id}/budgets`                    | GET                  |   ✅    | `$client->workspaces()->listBudgets($id)`               |
+| `/workspaces/{id}/budgets/{interval}`         | GET / PUT / DELETE   |   ✅    | `$client->workspaces()->retrieveBudget(...)` / `setBudget(...)` / `deleteBudget(...)` |
+| `/workspaces/{id}/members`                    | GET                  |   ✅    | `$client->workspaces()->listMembers($id)`               |
+| `/workspaces/{id}/members/add`                | POST                 |   ✅    | `$client->workspaces()->addMembers($id, $userIds)`      |
+| `/workspaces/{id}/members/remove`             | POST                 |   ✅    | `$client->workspaces()->removeMembers($id, $userIds)`   |
+| `/presets`                                    | GET                  |   ✅    | `$client->presets()->list(...)`                         |
+| `/presets/{slug}`                             | GET                  |   ✅    | `$client->presets()->retrieve($slug)`                   |
+| `/presets/{slug}/versions`                    | GET                  |   ✅    | `$client->presets()->listVersions($slug)`               |
+| `/presets/{slug}/versions/{version}`          | GET                  |   ✅    | `$client->presets()->retrieveVersion($slug, $version)`  |
+| `/presets/{slug}/chat/completions`            | POST                 |   ✅    | `$client->presets()->createFromChat($slug, ...)`        |
+| `/presets/{slug}/messages`                    | POST                 |   ✅    | `$client->presets()->createFromMessages($slug, ...)`    |
+| `/presets/{slug}/responses`                   | POST                 |   ✅    | `$client->presets()->createFromResponses($slug, ...)`   |
+| `/byok`                                       | GET / POST           |   ✅    | `$client->byok()->list(...)` / `create(...)`            |
+| `/byok/{id}`                                  | GET / PATCH / DELETE |   ✅    | `$client->byok()->retrieve($id)` / `update(...)` / `delete($id)` |
 | `/generation`                                 | GET                  |   ✅    | `$client->generation()->retrieve($id)`                  |
 | `/activity`                                   | GET                  |   ✅    | `$client->activity()->list(...)`                        |
 | `/credits`                                    | GET                  |   ✅    | `$client->credits()->retrieve()`                        |
@@ -748,6 +764,71 @@ $files = $client->containers()->listFiles($containerId)->data;
 $client->containers()->downloadFile($containerId, $files[0]->id)->saveTo('chart.png');
 
 $stored = $client->containers()->promoteFile($containerId, $files[0]->id)->data;
+```
+
+## Workspaces
+
+A workspace scopes keys, guardrails, budgets and members. Most account-level calls take a `workspace_id`.
+
+```php
+use OpenRouter\Enums\Workspaces\BudgetInterval;
+use OpenRouter\ValueObjects\Workspaces\CreateWorkspaceRequest;
+
+$workspace = $client->workspaces()->create(new CreateWorkspaceRequest(
+    name: 'Platform team',
+    slug: 'platform-team',
+    defaultTextModel: 'openai/gpt-4o',
+))->data;
+
+// One budget per interval — setBudget() is an upsert
+$client->workspaces()->setBudget($workspace->id, BudgetInterval::Monthly, limitUsd: 250.0);
+$client->workspaces()->listBudgets($workspace->id)->data;
+
+$client->workspaces()->addMembers($workspace->id, ['user_1', 'user_2']);
+$client->workspaces()->listMembers($workspace->id)->data;
+```
+
+Deleting the default workspace is guarded: pass `confirmDefaultWorkspaceDeletion: true` to go through with it.
+
+## Presets
+
+A preset is a saved inference configuration addressed by slug. Sending a request to a preset-scoped endpoint records that request's settings as a new version:
+
+```php
+$client->presets()->createFromChat('support-agent', new CreateChatRequest(
+    model: 'openai/gpt-4o',
+    messages: [new SystemMessage('You are a support agent.')],
+    temperature: 0.2,
+));
+
+$preset = $client->presets()->retrieve('support-agent')->data;
+$versions = $client->presets()->listVersions('support-agent')->data;
+
+echo $versions[0]->version;        // 3
+echo $versions[0]->systemPrompt;
+print_r($versions[0]->config);     // the settings as they were sent
+```
+
+`createFromMessages()` and `createFromResponses()` do the same for the Anthropic-format and Responses APIs.
+
+## BYOK provider credentials
+
+Use your own provider key instead of OpenRouter's for that provider. The secret is write-only — reads return a masked `label`:
+
+```php
+use OpenRouter\ValueObjects\Byok\CreateByokKeyRequest;
+
+$client->byok()->create(new CreateByokKeyRequest(
+    provider: 'anthropic',
+    key: $_ENV['ANTHROPIC_API_KEY'],
+    name: 'Anthropic production',
+    isFallback: true,
+    allowedModels: ['anthropic/claude-sonnet-4'],
+));
+
+foreach ($client->byok()->list(provider: 'anthropic')->data as $credential) {
+    echo $credential->label;   // sk-ant-...4f2a
+}
 ```
 
 ## Embeddings
