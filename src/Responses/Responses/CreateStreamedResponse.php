@@ -4,6 +4,25 @@ declare(strict_types=1);
 
 namespace OpenRouter\Responses\Responses;
 
+use OpenRouter\Responses\Responses\Stream\CreateStreamedCodeInterpreterCallCompletedEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedCodeInterpreterCallInProgressEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedCodeInterpreterCallInterpretingEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedFusionCallCompletedEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedFusionCallInProgressEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedApplyPatchDiffDeltaEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedApplyPatchDiffDoneEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedCodeInterpreterCodeDeltaEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedCodeInterpreterCodeDoneEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedCustomToolCallInputDeltaEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedCustomToolCallInputDoneEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedFusionCallAnalysisCompletedEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedFusionCallAnalysisInProgressEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedFusionCallPanelAddedEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedFusionCallPanelCompletedEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedFusionCallPanelDeltaEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedFusionCallPanelFailedEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedFusionCallPanelReasoningDeltaEvent;
+use OpenRouter\Responses\Responses\Stream\CreateStreamedDebugEvent;
 use OpenRouter\Responses\Responses\Stream\CreateStreamedContentPartAddedEvent;
 use OpenRouter\Responses\Responses\Stream\CreateStreamedContentPartDoneEvent;
 use OpenRouter\Responses\Responses\Stream\CreateStreamedCompletedEvent;
@@ -72,6 +91,25 @@ class CreateStreamedResponse
             'response.incomplete' => CreateStreamedIncompleteEvent::fromPayload($payload),
             'response.failed' => CreateStreamedFailedEvent::fromPayload($payload),
             'error' => CreateStreamedErrorEvent::fromPayload($payload),
+            'response.code_interpreter_call.completed' => CreateStreamedCodeInterpreterCallCompletedEvent::fromPayload($payload),
+            'response.code_interpreter_call.in_progress' => CreateStreamedCodeInterpreterCallInProgressEvent::fromPayload($payload),
+            'response.code_interpreter_call.interpreting' => CreateStreamedCodeInterpreterCallInterpretingEvent::fromPayload($payload),
+            'response.fusion_call.completed' => CreateStreamedFusionCallCompletedEvent::fromPayload($payload),
+            'response.fusion_call.in_progress' => CreateStreamedFusionCallInProgressEvent::fromPayload($payload),
+            'response.apply_patch_call_operation_diff.delta' => CreateStreamedApplyPatchDiffDeltaEvent::fromPayload($payload),
+            'response.apply_patch_call_operation_diff.done' => CreateStreamedApplyPatchDiffDoneEvent::fromPayload($payload),
+            'response.code_interpreter_call_code.delta' => CreateStreamedCodeInterpreterCodeDeltaEvent::fromPayload($payload),
+            'response.code_interpreter_call_code.done' => CreateStreamedCodeInterpreterCodeDoneEvent::fromPayload($payload),
+            'response.custom_tool_call_input.delta' => CreateStreamedCustomToolCallInputDeltaEvent::fromPayload($payload),
+            'response.custom_tool_call_input.done' => CreateStreamedCustomToolCallInputDoneEvent::fromPayload($payload),
+            'response.fusion_call.analysis.completed' => CreateStreamedFusionCallAnalysisCompletedEvent::fromPayload($payload),
+            'response.fusion_call.analysis.in_progress' => CreateStreamedFusionCallAnalysisInProgressEvent::fromPayload($payload),
+            'response.fusion_call.panel.added' => CreateStreamedFusionCallPanelAddedEvent::fromPayload($payload),
+            'response.fusion_call.panel.completed' => CreateStreamedFusionCallPanelCompletedEvent::fromPayload($payload),
+            'response.fusion_call.panel.delta' => CreateStreamedFusionCallPanelDeltaEvent::fromPayload($payload),
+            'response.fusion_call.panel.failed' => CreateStreamedFusionCallPanelFailedEvent::fromPayload($payload),
+            'response.fusion_call.panel.reasoning.delta' => CreateStreamedFusionCallPanelReasoningDeltaEvent::fromPayload($payload),
+            'response.debug' => CreateStreamedDebugEvent::fromPayload($payload),
             'response.output_item.added' => CreateStreamedOutputItemAddedEvent::fromPayload($payload),
             'response.output_item.done' => CreateStreamedOutputItemDoneEvent::fromPayload($payload),
             'response.content_part.added' => CreateStreamedContentPartAddedEvent::fromPayload($payload),

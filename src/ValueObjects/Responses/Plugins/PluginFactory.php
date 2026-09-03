@@ -20,6 +20,10 @@ final class PluginFactory
 
         return match ($id) {
             'auto-router' => AutoRouterPlugin::from($attributes),
+            'auto-beta-router' => AutoBetaRouterPlugin::from($attributes),
+            'pareto-router' => ParetoRouterPlugin::from($attributes),
+            'fusion' => FusionPlugin::from($attributes),
+            'web-fetch' => WebFetchPlugin::from($attributes),
             'moderation' => ModerationPlugin::from($attributes),
             'web' => WebSearchPlugin::from($attributes),
             'file-parser' => FileParserPlugin::from($attributes),

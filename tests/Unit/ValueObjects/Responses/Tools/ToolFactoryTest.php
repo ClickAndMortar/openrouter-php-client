@@ -20,6 +20,8 @@ use OpenRouter\ValueObjects\Responses\Tools\FunctionTool;
 use OpenRouter\ValueObjects\Responses\Tools\ImageGenerationServerTool;
 use OpenRouter\ValueObjects\Responses\Tools\McpServerTool;
 use OpenRouter\ValueObjects\Responses\Tools\ShellServerTool;
+use OpenRouter\ValueObjects\Responses\Tools\NamespaceTool;
+use OpenRouter\ValueObjects\Responses\Tools\OpenRouterServerTool;
 use OpenRouter\ValueObjects\Responses\Tools\ToolFactory;
 use OpenRouter\ValueObjects\Responses\Tools\UnknownTool;
 use OpenRouter\ValueObjects\Responses\Tools\WebSearchLegacyServerTool;
@@ -27,6 +29,7 @@ use OpenRouter\ValueObjects\Responses\Tools\WebSearchPreview20250311ServerTool;
 use OpenRouter\ValueObjects\Responses\Tools\WebSearchPreviewServerTool;
 use OpenRouter\ValueObjects\Responses\Tools\WebSearchServerTool;
 use OpenRouter\ValueObjects\Responses\Tools\WebSearchServerToolOpenRouter;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class ToolFactoryTest extends TestCase
@@ -191,5 +194,90 @@ final class ToolFactoryTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         WebSearchServerTool::from(['engine' => 'nonsense']);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function openRouterServerToolProvider(): iterable
+    {
+        foreach (OpenRouterServerTool::TYPES as $type) {
+            yield $type => [$type];
+        }
+    }
+
+    #[DataProvider('openRouterServerToolProvider')]
+    public function testFactoryResolvesOpenRouterServerTools(string $type): void
+    {
+        $tool = ToolFactory::from(['type' => $type]);
+
+        $this->assertInstanceOf(OpenRouterServerTool::class, $tool);
+        $this->assertSame($type, $tool->type());
+    }
+
+    public function testOpenRouterServerToolCoversEveryNewRequestSideType(): void
+    {
+        $this->assertSame(
+            [
+                'openrouter:advisor',
+                'openrouter:apply_patch',
+                'openrouter:bash',
+                'openrouter:experimental__search_models',
+                'openrouter:files',
+                'openrouter:fusion',
+                'openrouter:image_generation',
+                'openrouter:shell',
+                'openrouter:subagent',
+                'openrouter:tool_search',
+                'openrouter:web_fetch',
+            ],
+            OpenRouterServerTool::TYPES,
+        );
+    }
+
+    public function testOpenRouterServerToolSerializesParameters(): void
+    {
+        $tool = OpenRouterServerTool::bash(['engine' => 'container', 'sleep_after_seconds' => 30]);
+
+        $this->assertSame(
+            [
+                'type' => 'openrouter:bash',
+                'parameters' => ['engine' => 'container', 'sleep_after_seconds' => 30],
+            ],
+            $tool->toArray(),
+        );
+    }
+
+    public function testOpenRouterServerToolOmitsEmptyParameters(): void
+    {
+        $this->assertSame(['type' => 'openrouter:files'], OpenRouterServerTool::files()->toArray());
+    }
+
+    public function testOpenRouterServerToolRoundTripsThroughTheFactory(): void
+    {
+        $payload = [
+            'type' => 'openrouter:web_fetch',
+            'parameters' => ['max_uses' => 3, 'allowed_domains' => ['example.com']],
+        ];
+
+        $this->assertSame($payload, ToolFactory::from($payload)->toArray());
+    }
+
+    public function testFactoryResolvesNamespaceTool(): void
+    {
+        $payload = [
+            'type' => 'namespace',
+            'name' => 'billing',
+            'description' => 'Billing helpers',
+            'tools' => [['type' => 'function', 'name' => 'refund']],
+        ];
+
+        $tool = ToolFactory::from($payload);
+
+        $this->assertInstanceOf(NamespaceTool::class, $tool);
+        $this->assertSame('namespace', $tool->type());
+        $this->assertSame('billing', $tool->name);
+        $this->assertSame('Billing helpers', $tool->description);
+        $this->assertSame($payload, $tool->toArray());
     }
 }

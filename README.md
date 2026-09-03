@@ -460,6 +460,49 @@ foreach ($response->toolCalls() as $call) {
 }
 ```
 
+### OpenRouter server tools
+
+OpenRouter hosts a family of `openrouter:*` server tools it runs on your behalf - no executor closure needed. They share one `{type, parameters}` envelope, so a single value object per endpoint covers all of them, with named constructors for discoverability:
+
+```php
+use OpenRouter\ValueObjects\Responses\Tools\OpenRouterServerTool;
+
+$response = $client->responses()->send([
+    'model' => 'openai/gpt-4o',
+    'input' => 'Summarise https://example.com and patch the README accordingly.',
+    'tools' => [
+        OpenRouterServerTool::webFetch(['max_uses' => 3, 'allowed_domains' => ['example.com']]),
+        OpenRouterServerTool::applyPatch(),
+        OpenRouterServerTool::bash(['engine' => 'container']),
+    ],
+]);
+```
+
+| Endpoint            | Value object                    | Types                                                                                                                                      |
+|---------------------|---------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| `/responses`        | `OpenRouterServerTool`          | `advisor`, `apply_patch`, `bash`, `experimental__search_models`, `files`, `fusion`, `image_generation`, `shell`, `subagent`, `tool_search`, `web_fetch` |
+| `/chat/completions` | `ChatOpenRouterServerTool`      | `advisor`, `bash`, `experimental__search_models`, `files`, `fusion`, `image_generation`, `subagent`, `web_fetch`                            |
+| `/messages`         | `MessagesOpenRouterServerTool`  | `bash`, `experimental__search_models`, `image_generation`, `shell`, `tool_search`, `web_fetch`                                              |
+
+`openrouter:web_search` and `openrouter:datetime` predate this family and keep their own value objects. `NamespaceTool` groups several tools behind one named entry so the model sees a single tool.
+
+### Plugins
+
+```php
+use OpenRouter\ValueObjects\Responses\Plugins\FusionPlugin;
+use OpenRouter\ValueObjects\Responses\Plugins\ParetoRouterPlugin;
+
+$client->chat()->send([
+    'model' => 'openai/gpt-4o',
+    'messages' => [['role' => 'user', 'content' => 'Hi']],
+    'plugins' => [
+        new FusionPlugin(enabled: true, preset: 'general-high'),
+    ],
+]);
+```
+
+Available: `web`, `web-fetch`, `file-parser`, `moderation`, `response-healing`, `context-compression`, `auto-router`, `auto-beta-router`, `pareto-router`, `fusion`.
+
 ### Agent runner — multi-turn tool loops
 
 Register tools with their executor closures, call `->run()`, get a final answer. The runner handles the model → tool call → tool result → model loop for you, up to `maxToolRounds`.

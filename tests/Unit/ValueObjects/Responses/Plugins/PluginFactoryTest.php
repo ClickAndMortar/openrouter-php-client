@@ -11,6 +11,10 @@ use OpenRouter\ValueObjects\Responses\Plugins\AutoRouterPlugin;
 use OpenRouter\ValueObjects\Responses\Plugins\ContextCompressionPlugin;
 use OpenRouter\ValueObjects\Responses\Plugins\FileParserPlugin;
 use OpenRouter\ValueObjects\Responses\Plugins\ModerationPlugin;
+use OpenRouter\ValueObjects\Responses\Plugins\AutoBetaRouterPlugin;
+use OpenRouter\ValueObjects\Responses\Plugins\FusionPlugin;
+use OpenRouter\ValueObjects\Responses\Plugins\ParetoRouterPlugin;
+use OpenRouter\ValueObjects\Responses\Plugins\WebFetchPlugin;
 use OpenRouter\ValueObjects\Responses\Plugins\PluginFactory;
 use OpenRouter\ValueObjects\Responses\Plugins\ResponseHealingPlugin;
 use OpenRouter\ValueObjects\Responses\Plugins\UnknownPlugin;
@@ -93,5 +97,109 @@ final class PluginFactoryTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         WebSearchPlugin::from(['id' => 'web', 'engine' => 'unknown-engine']);
+    }
+
+    public function testFactoryResolvesAutoBetaRouterPlugin(): void
+    {
+        $payload = [
+            'id' => 'auto-beta-router',
+            'enabled' => true,
+            'cost_tier' => 'high',
+            'cost_quality_tradeoff' => 3,
+            'allowed_models' => ['anthropic/*'],
+            'excluded_models' => ['openai/gpt-3.5-turbo'],
+        ];
+
+        $plugin = PluginFactory::from($payload);
+
+        $this->assertInstanceOf(AutoBetaRouterPlugin::class, $plugin);
+        $this->assertSame('auto-beta-router', $plugin->id());
+        $this->assertSame('high', $plugin->costTier);
+        $this->assertSame(3, $plugin->costQualityTradeoff);
+        $this->assertSame(['anthropic/*'], $plugin->allowedModels);
+        $this->assertSame(['openai/gpt-3.5-turbo'], $plugin->excludedModels);
+        $this->assertSame($payload, $plugin->toArray());
+    }
+
+    public function testFactoryResolvesFusionPlugin(): void
+    {
+        $payload = [
+            'id' => 'fusion',
+            'enabled' => true,
+            'model' => 'openai/gpt-4o',
+            'preset' => 'general-high',
+            'max_tool_calls' => 4,
+            'analysis_models' => ['anthropic/claude-sonnet-4'],
+            'tools' => [['type' => 'function', 'name' => 'lookup']],
+        ];
+
+        $plugin = PluginFactory::from($payload);
+
+        $this->assertInstanceOf(FusionPlugin::class, $plugin);
+        $this->assertSame('fusion', $plugin->id());
+        $this->assertSame('openai/gpt-4o', $plugin->model);
+        $this->assertSame('general-high', $plugin->preset);
+        $this->assertSame(4, $plugin->maxToolCalls);
+        $this->assertSame($payload, $plugin->toArray());
+    }
+
+    public function testFactoryResolvesParetoRouterPlugin(): void
+    {
+        $payload = [
+            'id' => 'pareto-router',
+            'enabled' => true,
+            'max_price' => 2.5,
+            'min_coding_score' => 0.8,
+            'price_source' => 'weighted_avg',
+        ];
+
+        $plugin = PluginFactory::from($payload);
+
+        $this->assertInstanceOf(ParetoRouterPlugin::class, $plugin);
+        $this->assertSame('pareto-router', $plugin->id());
+        $this->assertSame(2.5, $plugin->maxPrice);
+        $this->assertSame(0.8, $plugin->minCodingScore);
+        $this->assertSame('weighted_avg', $plugin->priceSource);
+        $this->assertSame($payload, $plugin->toArray());
+    }
+
+    public function testFactoryResolvesWebFetchPlugin(): void
+    {
+        $payload = [
+            'id' => 'web-fetch',
+            'max_uses' => 3,
+            'max_content_tokens' => 4096,
+            'allowed_domains' => ['example.com'],
+            'blocked_domains' => ['spam.example'],
+        ];
+
+        $plugin = PluginFactory::from($payload);
+
+        $this->assertInstanceOf(WebFetchPlugin::class, $plugin);
+        $this->assertSame('web-fetch', $plugin->id());
+        $this->assertSame(3, $plugin->maxUses);
+        $this->assertSame(4096, $plugin->maxContentTokens);
+        $this->assertSame($payload, $plugin->toArray());
+    }
+
+    public function testAutoRouterPluginSupportsCostAndExclusionOptions(): void
+    {
+        $payload = [
+            'id' => 'auto-router',
+            'enabled' => true,
+            'allowed_models' => ['anthropic/*'],
+            'excluded_models' => ['openai/gpt-3.5-turbo'],
+            'cost_tier' => 'max',
+            'cost_quality_tradeoff' => 5,
+            'pin_model' => true,
+        ];
+
+        $plugin = PluginFactory::from($payload);
+
+        $this->assertSame(['openai/gpt-3.5-turbo'], $plugin->excludedModels);
+        $this->assertSame('max', $plugin->costTier);
+        $this->assertSame(5, $plugin->costQualityTradeoff);
+        $this->assertTrue($plugin->pinModel);
+        $this->assertSame($payload, $plugin->toArray());
     }
 }

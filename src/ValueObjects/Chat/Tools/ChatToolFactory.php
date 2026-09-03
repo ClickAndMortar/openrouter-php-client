@@ -17,6 +17,10 @@ final class ChatToolFactory
     {
         $type = is_string($attributes['type'] ?? null) ? $attributes['type'] : '';
 
+        if (in_array($type, ChatOpenRouterServerTool::TYPES, true)) {
+            return ChatOpenRouterServerTool::from($attributes);
+        }
+
         return match ($type) {
             'function' => ChatFunctionTool::from($attributes),
             'web_search', 'web_search_preview', 'web_search_preview_2025_03_11', 'web_search_2025_08_26'

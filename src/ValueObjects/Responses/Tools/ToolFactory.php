@@ -18,6 +18,10 @@ final class ToolFactory
     {
         $type = is_string($attributes['type'] ?? null) ? $attributes['type'] : '';
 
+        if (in_array($type, OpenRouterServerTool::TYPES, true)) {
+            return OpenRouterServerTool::from($attributes);
+        }
+
         return match ($type) {
             'function' => FunctionTool::from($attributes),
             'web_search_2025_08_26' => WebSearchServerTool::from($attributes),
@@ -34,6 +38,7 @@ final class ToolFactory
             'local_shell' => CodexLocalShellTool::from($attributes),
             'apply_patch' => ApplyPatchServerTool::from($attributes),
             'openrouter:datetime' => DatetimeServerTool::from($attributes),
+            'namespace' => NamespaceTool::from($attributes),
             'custom' => CustomTool::from($attributes),
             default => UnknownTool::from($attributes),
         };

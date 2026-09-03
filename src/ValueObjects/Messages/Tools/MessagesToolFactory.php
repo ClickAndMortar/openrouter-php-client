@@ -18,6 +18,10 @@ final class MessagesToolFactory
     {
         $type = is_string($attributes['type'] ?? null) ? $attributes['type'] : '';
 
+        if (in_array($type, MessagesOpenRouterServerTool::TYPES, true)) {
+            return MessagesOpenRouterServerTool::from($attributes);
+        }
+
         return match ($type) {
             'custom' => CustomTool::from($attributes),
             'bash_20250124' => BashTool::from($attributes),
