@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace OpenRouter\Contracts;
 
 use OpenRouter\Contracts\Resources\ActivityContract;
+use OpenRouter\Contracts\Resources\AnalyticsContract;
 use OpenRouter\Contracts\Resources\AudioContract;
 use OpenRouter\Contracts\Resources\AuthContract;
+use OpenRouter\Contracts\Resources\BenchmarksContract;
 use OpenRouter\Contracts\Resources\ByokContract;
 use OpenRouter\Contracts\Resources\ChatContract;
 use OpenRouter\Contracts\Resources\ContainersContract;
 use OpenRouter\Contracts\Resources\CreditsContract;
+use OpenRouter\Contracts\Resources\DatasetsContract;
 use OpenRouter\Contracts\Resources\EmbeddingsContract;
 use OpenRouter\Contracts\Resources\EndpointsContract;
 use OpenRouter\Contracts\Resources\FilesContract;
@@ -20,10 +23,12 @@ use OpenRouter\Contracts\Resources\ImagesContract;
 use OpenRouter\Contracts\Resources\KeysContract;
 use OpenRouter\Contracts\Resources\MessagesContract;
 use OpenRouter\Contracts\Resources\ModelsContract;
+use OpenRouter\Contracts\Resources\ObservabilityContract;
 use OpenRouter\Contracts\Resources\OrganizationContract;
 use OpenRouter\Contracts\Resources\PresetsContract;
 use OpenRouter\Contracts\Resources\ProvidersContract;
 use OpenRouter\Contracts\Resources\RerankContract;
+use OpenRouter\Contracts\Resources\ScimContract;
 use OpenRouter\Contracts\Resources\ResponsesContract;
 use OpenRouter\Contracts\Resources\VideosContract;
 use OpenRouter\Contracts\Resources\WorkspacesContract;
@@ -51,6 +56,21 @@ interface ClientContract
     public function videos(): VideosContract;
 
     /**
+     * Usage analytics: available metrics and dimensions, and ad-hoc queries.
+     */
+    public function analytics(): AnalyticsContract;
+
+    /**
+     * Published benchmark results and task-classification market share.
+     */
+    public function benchmarks(): BenchmarksContract;
+
+    /**
+     * OpenRouter's public, platform-wide usage datasets.
+     */
+    public function datasets(): DatasetsContract;
+
+    /**
      * Bring-your-own-key provider credentials.
      */
     public function byok(): ByokContract;
@@ -59,6 +79,16 @@ interface ClientContract
      * Saved inference configurations, addressed by slug.
      */
     public function presets(): PresetsContract;
+
+    /**
+     * Destinations OpenRouter broadcasts generation telemetry to.
+     */
+    public function observability(): ObservabilityContract;
+
+    /**
+     * SCIM groups synchronised from your IdP, and their workspace mappings.
+     */
+    public function scim(): ScimContract;
 
     /**
      * Workspaces: scoped containers for keys, guardrails, budgets and members.

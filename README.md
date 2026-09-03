@@ -50,7 +50,7 @@ echo $result->text();
 
 ## Endpoint coverage
 
-Status of every endpoint in the OpenRouter OpenAPI spec:
+Every endpoint in the OpenRouter OpenAPI spec has a typed wrapper — 101 of 101 operations:
 
 | Endpoint                                      | Method               | Status | SDK call                                                |
 |-----------------------------------------------|----------------------|:------:|---------------------------------------------------------|
@@ -96,6 +96,21 @@ Status of every endpoint in the OpenRouter OpenAPI spec:
 | `/presets/{slug}/responses`                   | POST                 |   ✅    | `$client->presets()->createFromResponses($slug, ...)`   |
 | `/byok`                                       | GET / POST           |   ✅    | `$client->byok()->list(...)` / `create(...)`            |
 | `/byok/{id}`                                  | GET / PATCH / DELETE |   ✅    | `$client->byok()->retrieve($id)` / `update(...)` / `delete($id)` |
+| `/model/{author}/{slug}`                      | GET                  |   ✅    | `$client->models()->retrieve($author, $slug)`           |
+| `/generation/content`                         | GET                  |   ✅    | `$client->generation()->content($id)`                   |
+| `/generation/feedback`                        | POST                 |   ✅    | `$client->generation()->submitFeedback(...)`            |
+| `/analytics/meta`                             | GET                  |   ✅    | `$client->analytics()->meta()`                          |
+| `/analytics/query`                            | POST                 |   ✅    | `$client->analytics()->query(...)`                      |
+| `/benchmarks`                                 | GET                  |   ✅    | `$client->benchmarks()->list(...)`                      |
+| `/classifications/task`                       | GET                  |   ✅    | `$client->benchmarks()->taskClassification(...)`        |
+| `/datasets/app-rankings`                      | GET                  |   ✅    | `$client->datasets()->appRankings(...)`                 |
+| `/datasets/rankings-daily`                    | GET                  |   ✅    | `$client->datasets()->dailyRankings(...)`               |
+| `/datasets/session-cost`                      | GET                  |   ✅    | `$client->datasets()->sessionCost(...)`                 |
+| `/observability/destinations`                 | GET / POST           |   ✅    | `$client->observability()->list(...)` / `create(...)`   |
+| `/observability/destinations/{id}`            | GET / PATCH / DELETE |   ✅    | `$client->observability()->retrieve($id)` / `update(...)` / `delete($id)` |
+| `/scim/groups`                                | GET                  |   ✅    | `$client->scim()->listGroups(...)`                      |
+| `/scim/group-mappings`                        | GET / POST           |   ✅    | `$client->scim()->listGroupMappings(...)` / `createGroupMapping(...)` |
+| `/scim/group-mappings/{id}`                   | GET / PATCH / DELETE |   ✅    | `$client->scim()->retrieveGroupMapping($id)` / `updateGroupMapping(...)` / `deleteGroupMapping(...)` |
 | `/generation`                                 | GET                  |   ✅    | `$client->generation()->retrieve($id)`                  |
 | `/activity`                                   | GET                  |   ✅    | `$client->activity()->list(...)`                        |
 | `/credits`                                    | GET                  |   ✅    | `$client->credits()->retrieve()`                        |
@@ -119,7 +134,7 @@ Status of every endpoint in the OpenRouter OpenAPI spec:
 
 Unsupported endpoints can still be reached through `$client->transporter()` - build a `Payload` and dispatch it manually. PRs adding typed wrappers are welcome.
 
-`api-coverage.json` tracks every operation in the live spec as either covered or a reviewed gap; see [Staying in sync with the API](#staying-in-sync-with-the-api).
+`api-coverage.json` tracks every operation in the live spec and CI fails when a new one appears upstream; see [Staying in sync with the API](#staying-in-sync-with-the-api).
 
 ```php
 use OpenRouter\ValueObjects\Transporter\Payload;
@@ -829,6 +844,88 @@ $client->byok()->create(new CreateByokKeyRequest(
 foreach ($client->byok()->list(provider: 'anthropic')->data as $credential) {
     echo $credential->label;   // sk-ant-...4f2a
 }
+```
+
+## Observability destinations
+
+Broadcast generation telemetry to Langfuse, Datadog, S3, a plain webhook and thirteen other sinks. They share one envelope and differ in `type` and the shape of `config`:
+
+```php
+use OpenRouter\ValueObjects\Observability\CreateObservabilityDestinationRequest;
+
+$client->observability()->create(new CreateObservabilityDestinationRequest(
+    type: 'langfuse',
+    name: 'Langfuse prod',
+    config: ['host' => 'https://cloud.langfuse.com'],
+    samplingRate: 0.5,
+    privacyMode: true,
+));
+```
+
+## SCIM
+
+Groups synchronised from your identity provider, and the mappings that place their members into workspaces. Groups are read-only here — membership is managed in the IdP:
+
+```php
+use OpenRouter\Enums\Workspaces\WorkspaceRole;
+
+foreach ($client->scim()->listGroups()->data as $group) {
+    echo $group->displayName;   // Engineering
+}
+
+$client->scim()->createGroupMapping(
+    scimGroupId: 'sg_1',
+    workspaceId: 'ws_1',
+    role: WorkspaceRole::Member,
+);
+
+// keepMembers decides whether provisioned users stay behind
+$client->scim()->deleteGroupMapping('sgm_1', keepMembers: true);
+```
+
+## Analytics
+
+`meta()` first, to discover the valid metric and dimension identifiers rather than hardcoding them:
+
+```php
+$meta = $client->analytics()->meta()->data;
+
+$result = $client->analytics()->query([
+    'metrics' => ['tokens', 'cost'],
+    'dimensions' => ['model'],
+    'granularity' => 'day',
+    'time_range' => ['start' => '2026-08-01', 'end' => '2026-09-01'],
+])->data;
+```
+
+The result shape follows the query, so both come back as raw arrays rather than a type the spec does not define.
+
+## Datasets and benchmarks
+
+Public, platform-wide aggregates — not your own account:
+
+```php
+$client->datasets()->appRankings(category: 'programming', limit: 10)->data;
+$client->datasets()->dailyRankings(startDate: '2026-08-01', endDate: '2026-09-01')->data;
+$client->datasets()->sessionCost(appSlug: 'cursor')->data;
+
+$client->benchmarks()->list(taskType: 'coding')->data;
+$client->benchmarks()->taskClassification(window: '30d')->data;
+```
+
+## Generation feedback and content
+
+```php
+use OpenRouter\Enums\Generation\FeedbackCategory;
+
+$client->generation()->submitFeedback(
+    'gen_1',
+    FeedbackCategory::IncorrectResponse,
+    'The answer cited a page that does not exist.',
+);
+
+// Stored prompt/completion, when logging is enabled for the account
+$content = $client->generation()->content('gen_1')->data;
 ```
 
 ## Embeddings

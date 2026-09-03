@@ -8,6 +8,7 @@ use OpenRouter\Contracts\Resources\ModelsContract;
 use OpenRouter\Responses\Models\CountResponse;
 use OpenRouter\Responses\Models\ListEndpointsResponse;
 use OpenRouter\Responses\Models\ListResponse;
+use OpenRouter\Responses\Models\RetrieveModelResponse;
 use OpenRouter\ValueObjects\Transporter\Payload;
 
 final class Models implements ModelsContract
@@ -99,6 +100,21 @@ final class Models implements ModelsContract
     /**
      * Lists all endpoints for a given model.
      */
+    /**
+     * Retrieves a single model by author and slug.
+     */
+    public function retrieve(string $author, string $slug): RetrieveModelResponse
+    {
+        $payload = Payload::retrieve('model', $author, "/{$slug}");
+
+        $response = $this->transporter->requestObject($payload);
+
+        /** @var array<string, mixed> $data */
+        $data = $response->data();
+
+        return RetrieveModelResponse::from($data, $response->meta());
+    }
+
     public function listEndpoints(string $author, string $slug): ListEndpointsResponse
     {
         $payload = Payload::retrieve('models', $author, "/{$slug}/endpoints");

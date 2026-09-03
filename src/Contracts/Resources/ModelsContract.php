@@ -7,6 +7,7 @@ namespace OpenRouter\Contracts\Resources;
 use OpenRouter\Responses\Models\CountResponse;
 use OpenRouter\Responses\Models\ListEndpointsResponse;
 use OpenRouter\Responses\Models\ListResponse;
+use OpenRouter\Responses\Models\RetrieveModelResponse;
 
 interface ModelsContract
 {
@@ -46,6 +47,11 @@ interface ModelsContract
      * Returns the total count of available models.
      */
     public function count(?string $outputModalities = null): CountResponse;
+
+    /**
+     * Retrieves a single model by author and slug.
+     */
+    public function retrieve(string $author, string $slug): RetrieveModelResponse;
 
     /**
      * Lists all endpoints for a given model.

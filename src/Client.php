@@ -7,12 +7,15 @@ namespace OpenRouter;
 use OpenRouter\Contracts\ClientContract;
 use OpenRouter\Contracts\TransporterContract;
 use OpenRouter\Resources\Activity;
+use OpenRouter\Resources\Analytics;
 use OpenRouter\Resources\Audio;
 use OpenRouter\Resources\Auth;
+use OpenRouter\Resources\Benchmarks;
 use OpenRouter\Resources\Byok;
 use OpenRouter\Resources\Chat;
 use OpenRouter\Resources\Containers;
 use OpenRouter\Resources\Credits;
+use OpenRouter\Resources\Datasets;
 use OpenRouter\Resources\Embeddings;
 use OpenRouter\Resources\Endpoints;
 use OpenRouter\Resources\Files;
@@ -22,10 +25,12 @@ use OpenRouter\Resources\Images;
 use OpenRouter\Resources\Keys;
 use OpenRouter\Resources\Messages;
 use OpenRouter\Resources\Models;
+use OpenRouter\Resources\Observability;
 use OpenRouter\Resources\Organization;
 use OpenRouter\Resources\Presets;
 use OpenRouter\Resources\Providers;
 use OpenRouter\Resources\Rerank;
+use OpenRouter\Resources\Scim;
 use OpenRouter\Resources\Responses;
 use OpenRouter\Resources\Videos;
 use OpenRouter\Resources\Workspaces;
@@ -136,6 +141,21 @@ final class Client implements ClientContract
         return new Videos($this->transporter);
     }
 
+    public function analytics(): Analytics
+    {
+        return new Analytics($this->transporter);
+    }
+
+    public function benchmarks(): Benchmarks
+    {
+        return new Benchmarks($this->transporter);
+    }
+
+    public function datasets(): Datasets
+    {
+        return new Datasets($this->transporter);
+    }
+
     public function byok(): Byok
     {
         return new Byok($this->transporter);
@@ -144,6 +164,16 @@ final class Client implements ClientContract
     public function presets(): Presets
     {
         return new Presets($this->transporter);
+    }
+
+    public function observability(): Observability
+    {
+        return new Observability($this->transporter);
+    }
+
+    public function scim(): Scim
+    {
+        return new Scim($this->transporter);
     }
 
     public function workspaces(): Workspaces
