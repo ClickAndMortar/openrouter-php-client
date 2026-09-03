@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenRouter PHP SDK — Remaining API Surface</title>
+<meta name="description" content="Waves 1 and 2 delivered: both transport primitives plus 18 media and file endpoints. The 45 operations that remain are all plain JSON.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<noscript><style>.reveal{opacity:1!important;transform:none!important;}</style></noscript>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    fontFamily: { sans:['Geist','ui-sans-serif','system-ui','sans-serif'], mono:['"Geist Mono"','ui-monospace','monospace'] },
+    colors: {
+      canvas:'#FFFFFF', panel:'#F6F8FA', panel2:'#EEF1F4',
+      ink:'#1C2128', soft:'#3D444D', mute:'#6E7781', line:'#D8DEE4', line2:'#E8ECEF',
+      brand:{ 50:'#FFF3E9', 300:'#FE9A4A', 500:'#FE6400', 600:'#E25400', 700:'#B83F00' },
+      accent:'#0969DA', good:'#1A7F37', warn:'#9A6700', bad:'#CF222E',
+    },
+    letterSpacing:{ tightish:'-0.01em' },
+  } }
+}
+</script>
+
+<style>
+html,body{ background:#fff; color:#1C2128; }
+body{ font-family:'Geist',ui-sans-serif,system-ui,sans-serif; -webkit-font-smoothing:antialiased; font-feature-settings:'ss01'; }
+.font-mono{ font-family:'Geist Mono',ui-monospace,monospace; }
+.num{ font-variant-numeric:tabular-nums; }
+.tech-bg{ background-color:#fff; background-image:radial-gradient(rgba(28,33,40,0.05) 1px,transparent 1px); background-size:24px 24px; background-position:-1px -1px; }
+.topaccent{ height:3px; background:linear-gradient(90deg,#FE6400,#E25400 60%,#B83F00); }
+.kicker{ font-family:'Geist Mono',monospace; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#6E7781; }
+.section-no{ font-family:'Geist Mono',monospace; letter-spacing:.04em; font-weight:600; color:#FE6400; font-size:12px; }
+.h-mono{ font-family:'Geist Mono',monospace; font-weight:500; letter-spacing:-.01em; }
+.bignum{ font-family:'Geist Mono',monospace; font-weight:500; letter-spacing:-.02em; font-variant-numeric:tabular-nums; line-height:.9; }
+.card{ border:1px solid #D8DEE4; background:#fff; border-radius:10px; box-shadow:0 1px 2px rgba(28,33,40,.04); }
+.pill{ display:inline-flex; align-items:center; gap:.38rem; padding:.18rem .5rem; border-radius:6px; font-family:'Geist Mono',monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; border:1px solid transparent; }
+.pill .dot{ width:.42rem; height:.42rem; border-radius:999px; background:currentColor; }
+.pill-good{ color:#1A7F37; background:#DAFBE1; border-color:#B4E6C1; }
+.pill-warn{ color:#7A5200; background:#FFF8C5; border-color:#EBD88A; }
+.pill-bad { color:#CF222E; background:#FFEBE9; border-color:#F3C0BD; }
+.pill-ink { color:#3D444D; background:#EEF1F4; border-color:#DCE2E8; }
+.pill-brand{ color:#B83F00; background:#FFF3E9; border-color:#FFD2AE; }
+.badge{ display:inline-flex; align-items:center; justify-content:center; width:1.75rem; height:1.75rem; border-radius:6px; color:#fff; font-family:'Geist Mono',monospace; font-size:11px; font-weight:600; }
+.reveal{ opacity:0; transform:translateY(16px); transition:opacity .6s cubic-bezier(.2,.8,.2,1), transform .6s cubic-bezier(.2,.8,.2,1); }
+.reveal.in{ opacity:1; transform:none; }
+.r1{ transition-delay:.04s } .r2{ transition-delay:.10s } .r3{ transition-delay:.17s } .r4{ transition-delay:.24s } .r5{ transition-delay:.31s }
+.hbar{ height:10px; border-radius:3px; background:#E8ECEF; overflow:hidden; }
+.hbar>span{ display:block; height:100%; width:0; border-radius:3px; transition:width 1.2s cubic-bezier(.2,.8,.2,1); }
+.dt{ width:100%; border-collapse:collapse; font-size:13px; }
+.dt th{ font-family:'Geist Mono',monospace; font-size:10.5px; color:#6E7781; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #D8DEE4; padding:8px; text-align:right; white-space:nowrap; }
+.dt th:first-child{ text-align:left; }
+.dt td{ padding:7px 8px; border-bottom:1px solid #E8ECEF; text-align:right; }
+.dt td:first-child{ text-align:left; font-family:'Geist Mono',monospace; font-size:12px; color:#1C2128; }
+.dt tbody tr:hover td{ background:#F6F8FA; }
+.code{ font-family:'Geist Mono',monospace; font-size:12px; line-height:1.6; background:#F6F8FA; border:1px solid #E8ECEF; border-radius:8px; padding:12px 14px; overflow-x:auto; color:#1C2128; white-space:pre; }
+.codeline{ font-family:'Geist Mono',monospace; font-size:11px; color:#3D444D; background:#EEF1F4; padding:1px 5px; border-radius:5px; border:1px solid #DCE2E8; }
+.mono-inline{ font-family:'Geist Mono',monospace; font-size:.92em; color:#0969DA; }
+@media print{
+  .no-print{ display:none !important; }
+  body,.tech-bg{ background:#fff !important; background-image:none !important; }
+  .reveal{ opacity:1 !important; transform:none !important; }
+  .card{ box-shadow:none; } .code{ white-space:pre-wrap; }
+  section{ page-break-inside:avoid; }
+}
+@media (prefers-reduced-motion:reduce){
+  .reveal{ opacity:1 !important; transform:none !important; transition:none !important; }
+  .hbar>span{ transition:none !important; }
+}
+</style>
+</head>
+
+<body class="tech-bg relative">
+<div class="topaccent"></div>
+
+<header class="border-b border-line bg-canvas/80 backdrop-blur relative z-20">
+  <div class="max-w-[1200px] mx-auto px-6 lg:px-10 h-11 flex items-center justify-between kicker">
+    <div class="flex items-center gap-4 lg:gap-7">
+      <span class="text-brand-600 font-semibold">openrouter-php-client</span>
+      <span class="opacity-70">API coverage roadmap &middot; rev. 2</span>
+      <span class="hidden md:inline opacity-50">September 3, 2026</span>
+    </div>
+    <div class="flex items-center gap-4 lg:gap-7">
+      <span class="hidden sm:inline opacity-70">spec rev. 2026-09-03</span>
+      <span class="opacity-40 hidden sm:inline">/</span>
+      <button onclick="window.print()" class="hidden md:inline opacity-60 hover:opacity-100 transition no-print">print &#8599;</button>
+    </div>
+  </div>
+</header>
+
+<section class="relative"><div class="max-w-[1200px] mx-auto px-6 lg:px-10 pt-12 lg:pt-16 pb-12">
+  <div class="kicker mb-5 reveal r1">// waves 1&ndash;2 delivered &middot; openrouter openapi &middot; 101 operations</div>
+  <div class="grid grid-cols-12 gap-6 lg:gap-10 items-end">
+    <div class="col-span-12 lg:col-span-8">
+      <h1 class="h-mono text-[30px] sm:text-[42px] lg:text-[50px] leading-[1.05] tracking-tightish reveal r2">The hard 7 are done.<br>The 45 left are all JSON<span class="text-brand-500">.</span></h1>
+      <p class="mt-7 text-lg sm:text-xl leading-relaxed text-soft max-w-2xl reveal r3">Waves 1 and 2 shipped both transport primitives and the 18 media and file endpoints that needed them. Every operation still uncovered is a plain JSON call on a transporter that already handles it.</p>
+    </div>
+    <div class="col-span-12 lg:col-span-4 lg:text-right reveal r4">
+      <div class="kicker mb-2">operations covered</div>
+      <div class="bignum text-brand-500 text-[64px] lg:text-[92px] leading-none"><span data-counter data-target="56" data-dec="0">0</span><span class="text-2xl lg:text-3xl text-mute"> / 101</span></div>
+      <div class="mt-2 kicker">was 38 / 101</div>
+    </div>
+  </div>
+
+  <div class="mt-11 grid grid-cols-1 md:grid-cols-3 reveal r4 card overflow-hidden">
+    <div class="px-6 py-6 border-b md:border-b-0 md:border-r border-line">
+      <div class="kicker mb-3">[A] delivered in waves 1&ndash;2</div>
+      <div class="flex items-baseline gap-2"><span class="bignum num text-5xl lg:text-6xl text-good">18</span><span class="font-mono text-mute">ops</span></div>
+      <p class="mt-3 text-soft text-sm leading-relaxed">Files, Containers, Videos, Images and Audio &mdash; every endpoint that needed multipart, binary bodies or a new SSE stream.</p>
+    </div>
+    <div class="px-6 py-6 border-b md:border-b-0 md:border-r border-line bg-panel">
+      <div class="kicker mb-3">[B] still to wrap</div>
+      <div class="flex items-baseline gap-2"><span class="bignum num text-5xl lg:text-6xl text-warn">45</span><span class="font-mono text-mute">ops</span></div>
+      <p class="mt-3 text-soft text-sm leading-relaxed">All JSON in, JSON out, across 10 families. Reachable today through <span class="mono-inline">$client-&gt;transporter()</span>; wrapping them is typing, not plumbing.</p>
+    </div>
+    <div class="px-6 py-6">
+      <div class="kicker mb-3">[C] test suite</div>
+      <div class="flex items-baseline gap-2"><span class="bignum num text-5xl lg:text-6xl text-ink">628</span><span class="font-mono text-mute">tests</span></div>
+      <p class="mt-3 text-soft text-sm leading-relaxed">2,115 assertions, up from 428 / 1,614 before this work. Every one written before the code that satisfies it.</p>
+    </div>
+  </div>
+</div></section>
+
+<section class="border-y border-line bg-panel"><div class="max-w-[1200px] mx-auto px-6 lg:px-10 py-9 lg:py-11">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-7 lg:gap-12">
+    <div class="reveal r1"><div class="flex items-center gap-2 mb-2"><span style="width:9px;height:9px;border-radius:50%;background:#1A7F37;display:inline-block"></span><span class="font-mono text-sm font-semibold">Media &amp; files &mdash; shipped</span><span class="text-good text-xs">DONE</span></div><p class="text-soft text-sm leading-relaxed">18 operations across Files, Containers, Videos, Images and Audio, on two new primitives: <span class="mono-inline">Payload::upload()</span> for multipart and <span class="mono-inline">requestContent()</span> returning a <span class="mono-inline">BinaryResponse</span>.</p></div>
+    <div class="reveal r2"><div class="flex items-center gap-2 mb-2"><span style="width:9px;height:9px;border-radius:50%;background:#9A6700;display:inline-block"></span><span class="font-mono text-sm font-semibold">JSON resources &mdash; typing only</span><span class="text-warn text-xs">NEXT</span></div><p class="text-soft text-sm leading-relaxed">The 45 that remain, across Workspaces, Presets, BYOK, SCIM, Observability, Analytics, Datasets and the long tail. Every one is JSON in, JSON out on the transporter that already ships.</p></div>
+    <div class="reveal r3"><div class="flex items-center gap-2 mb-2"><span style="width:9px;height:9px;border-radius:50%;background:#1A7F37;display:inline-block"></span><span class="font-mono text-sm font-semibold">Drift &mdash; guarded</span><span class="text-good text-xs">WATCHED</span></div><p class="text-soft text-sm leading-relaxed"><span class="mono-inline">api-coverage.json</span> now records 56 covered and 45 reviewed gaps. A 102nd operation appearing upstream fails CI instead of going unnoticed for five months, as these did.</p></div>
+  </div>
+</div></section>
+
+<section class="relative" id="gap"><div class="max-w-[1200px] mx-auto px-6 lg:px-10 py-14 lg:py-18">
+  <header class="grid grid-cols-12 gap-6 lg:gap-10 items-end mb-8 lg:mb-10">
+    <div class="col-span-12 lg:col-span-7">
+      <div class="section-no mb-2 reveal r1">&sect; 01 &mdash; THE GAP</div>
+      <h2 class="h-mono text-2xl sm:text-3xl lg:text-[32px] leading-tight tracking-tightish reveal r2">Fifteen families, five now shipped</h2>
+    </div>
+    <div class="col-span-12 lg:col-span-5"><p class="text-soft text-base leading-relaxed reveal r3">Every operation that was uncovered when this report was first written, grouped by resource. Bar length is operation count; the five families marked <em>done</em> shipped in wave 2.<span class="kicker block mt-2">source: api-coverage.json &middot; 56 covered / 45 gaps</span></p></div>
+  </header>
+
+  <div class="card p-5 lg:p-6 overflow-x-auto reveal r1">
+    <table class="dt">
+      <thead><tr><th>family</th><th>operations</th><th>methods</th><th>transport</th><th>sequenced</th></tr></thead>
+      <tbody>
+      <tr>
+        <td>Workspaces</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">12</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="100" style="background:#9A6700"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST·PATCH·DELETE·PUT</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 3</span></td>
+      </tr>
+      <tr>
+        <td>Presets</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">7</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="58" style="background:#9A6700"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 3</span></td>
+      </tr>
+      <tr>
+        <td>SCIM</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">6</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="50" style="background:#1A7F37"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST·PATCH·DELETE</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 4</span></td>
+      </tr>
+      <tr>
+        <td>Files</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">5</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="42" style="background:#1C2128"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST·DELETE</span></td>
+        <td><span class="pill pill-bad"><span class="dot"></span>MULTIPART</span></td>
+        <td><span class='pill pill-good'><span class='dot'></span>done</span></td>
+      </tr>
+      <tr>
+        <td>BYOK</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">5</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="42" style="background:#9A6700"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST·PATCH·DELETE</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 3</span></td>
+      </tr>
+      <tr>
+        <td>Observability</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">5</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="42" style="background:#1A7F37"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST·PATCH·DELETE</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 4</span></td>
+      </tr>
+      <tr>
+        <td>Containers</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">4</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="33" style="background:#1C2128"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST</span></td>
+        <td><span class="pill pill-bad"><span class="dot"></span>BINARY</span></td>
+        <td><span class='pill pill-good'><span class='dot'></span>done</span></td>
+      </tr>
+      <tr>
+        <td>Videos</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">4</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="33" style="background:#1C2128"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST</span></td>
+        <td><span class="pill pill-bad"><span class="dot"></span>BINARY</span></td>
+        <td><span class='pill pill-good'><span class='dot'></span>done</span></td>
+      </tr>
+      <tr>
+        <td>Images</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">3</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="25" style="background:#1C2128"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST</span></td>
+        <td><span class="pill pill-warn"><span class="dot"></span>SSE</span></td>
+        <td><span class='pill pill-good'><span class='dot'></span>done</span></td>
+      </tr>
+      <tr>
+        <td>Datasets</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">3</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="25" style="background:#1A7F37"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 4</span></td>
+      </tr>
+      <tr>
+        <td>Audio</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">2</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="17" style="background:#1C2128"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">POST</span></td>
+        <td><span class="pill pill-bad"><span class="dot"></span>MIXED</span></td>
+        <td><span class='pill pill-good'><span class='dot'></span>done</span></td>
+      </tr>
+      <tr>
+        <td>Analytics</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">2</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="17" style="background:#1A7F37"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 4</span></td>
+      </tr>
+      <tr>
+        <td>Generation+</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">2</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="17" style="background:#1A7F37"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET·POST</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 4</span></td>
+      </tr>
+      <tr>
+        <td>Benchmarks</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">2</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="17" style="background:#1A7F37"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 4</span></td>
+      </tr>
+      <tr>
+        <td>Model detail</td>
+        <td><div class="flex items-center gap-3 justify-end"><span class="num font-mono text-ink">1</span>
+          <div class="hbar w-24 shrink-0"><span data-bar data-pct="8" style="background:#1A7F37"></span></div></div></td>
+        <td><span class="font-mono text-[11px] text-mute">GET</span></td>
+        <td><span class="pill pill-good"><span class="dot"></span>JSON</span></td>
+        <td><span class='font-mono text-[11px] text-mute'>wave 4</span></td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card p-5 lg:p-6 mt-6 reveal r2">
+    <div class="kicker mb-2">what each family actually contains</div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Workspaces</span>
+            <span class="block kicker mt-0.5">12 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">CRUD, per-interval budgets, member add/remove. <span class='mono-inline'>workspace_id</span> is already threaded through the covered keys/guardrails/activity calls.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Presets</span>
+            <span class="block kicker mt-0.5">7 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Preset CRUD plus preset-scoped inference: <span class='mono-inline'>/presets/{slug}/chat/completions</span>, <span class='mono-inline'>/messages</span>, <span class='mono-inline'>/responses</span> reuse request bodies this SDK already models.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">SCIM</span>
+            <span class="block kicker mt-0.5">6 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Group-mapping CRUD plus a groups listing. Flat JSON, enterprise-only.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Files</span>
+            <span class="block kicker mt-0.5">5 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Shipped. Upload goes out as <span class='mono-inline'>multipart/form-data</span>, download comes back as raw bytes. The <span class='mono-inline'>_shape</span> union (openrouter/openai/anthropic) is normalised by <span class='mono-inline'>StoredFile::sizeInBytes()</span>.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">BYOK</span>
+            <span class="block kicker mt-0.5">5 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Bring-your-own-key provider credentials. 9-property create body.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Observability</span>
+            <span class="block kicker mt-0.5">5 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Destination CRUD across 13 sinks (Datadog, Langfuse, S3, webhook, OTel…), each a <span class='mono-inline'>type</span>-discriminated variant.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Containers</span>
+            <span class="block kicker mt-0.5">4 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Shipped. List, read and download code-interpreter output, and promote a file into durable workspace documents.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Videos</span>
+            <span class="block kicker mt-0.5">4 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Shipped. Submit → poll → download, with <span class='mono-inline'>VideoJobResponse::isTerminal()</span> for the polling loop.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Images</span>
+            <span class="block kicker mt-0.5">3 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Shipped, buffered and streamed. Three typed SSE frames (completed, partial_image, text_chunk) over the existing stream plumbing.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Datasets</span>
+            <span class="block kicker mt-0.5">3 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">App rankings, daily model token totals, session cost. Read-only reporting.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Audio</span>
+            <span class="block kicker mt-0.5">2 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Shipped. Speech returns raw audio; transcription takes either inline JSON audio or a multipart upload.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Analytics</span>
+            <span class="block kicker mt-0.5">2 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Metadata plus a 10-property query body. Read-only.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Generation+</span>
+            <span class="block kicker mt-0.5">2 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1"><span class='mono-inline'>/generation/content</span> and <span class='mono-inline'>/generation/feedback</span> — extend the Generation resource already in the SDK.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Benchmarks</span>
+            <span class="block kicker mt-0.5">2 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1">Benchmark listing and task-classification market share. Two plain GETs.</p>
+        </div>
+        <div class="border-b border-line2 last:border-0 py-3 flex gap-4">
+          <div class="w-28 shrink-0"><span class="font-mono text-[12px] text-ink">Model detail</span>
+            <span class="block kicker mt-0.5">1 ops</span></div>
+          <p class="text-soft text-[13px] leading-relaxed flex-1"><span class='mono-inline'>GET /model/{author}/{slug}</span> — single-model lookup, reuses the existing <span class='mono-inline'>ListResponseModel</span>.</p>
+        </div>
+  </div>
+</div></section>
+
+<section class="border-t border-line bg-panel" id="blockers"><div class="max-w-[1200px] mx-auto px-6 lg:px-10 py-14 lg:py-18">
+  <header class="grid grid-cols-12 gap-6 lg:gap-10 items-end mb-8 lg:mb-10">
+    <div class="col-span-12 lg:col-span-7">
+      <div class="section-no mb-2 reveal r1">&sect; 02 &mdash; WHAT WAS BLOCKING IT</div>
+      <h2 class="h-mono text-2xl sm:text-3xl lg:text-[32px] leading-tight tracking-tightish reveal r2">Three primitives, all now in place</h2>
+    </div>
+    <div class="col-span-12 lg:col-span-5"><p class="text-soft text-base leading-relaxed reveal r3">The transporter handled exactly one shape &mdash; a JSON body in, a JSON body out. Wave 1 added the two that were missing; the third turned out to need only event classes.<span class="kicker block mt-2">delivered &middot; September 3, 2026</span></p></div>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
+    <article class="card p-6 lg:p-7 reveal r1">
+      <div class="flex items-center gap-2.5 mb-3 flex-wrap">
+        <span class="badge" style="background:#1A7F37">1</span>
+        <span class="pill pill-good"><span class="dot"></span>solved &middot; 2 ops</span>
+        <span class="font-mono text-[11px] text-mute ml-auto">Payload::upload()</span>
+      </div>
+      <h3 class="h-mono text-lg lg:text-xl leading-snug mb-2">Multipart request bodies</h3>
+      <p class="text-soft text-[14px] leading-relaxed mb-3">The enum case existed and nothing referenced it; all five <span class="mono-inline">Payload</span> factories hardcoded <span class="mono-inline">ContentType::JSON</span>. A sixth factory now builds an RFC 7578 body from an <span class="mono-inline">UploadedFile</span> plus scalar and repeated <span class="mono-inline">name[]</span> fields.</p>
+      <div class="code">// src/Enums/Transporter/ContentType.php:13 — declared, never referenced
+case MULTIPART = 'multipart/form-data';
+
+// src/ValueObjects/Transporter/Payload.php — all five factories hardcode JSON
+public static function list(string $resource, array $parameters = []): self
+{
+    return new self(ContentType::JSON, Method::GET, ...);
+}
+public static function create(string $resource, array $parameters): self
+{
+    return new self(ContentType::JSON, Method::POST, ...);
+}</div>
+      <div class="mt-3 bg-panel border-l-2 border-good pl-3 py-2 pr-3 rounded-r">
+        <div class="kicker mb-1">unblocked</div><p class="text-soft text-xs leading-relaxed"><span class="mono-inline">POST /files</span> and <span class="mono-inline">POST /audio/transcriptions</span> &mdash; and with them the whole Files family, since upload is its entry point.</p>
+      </div>
+    </article>
+
+    <article class="card p-6 lg:p-7 reveal r2">
+      <div class="flex items-center gap-2.5 mb-3 flex-wrap">
+        <span class="badge" style="background:#1A7F37">2</span>
+        <span class="pill pill-good"><span class="dot"></span>solved &middot; 4 ops</span>
+        <span class="font-mono text-[11px] text-mute ml-auto">requestContent()</span>
+      </div>
+      <h3 class="h-mono text-lg lg:text-xl leading-snug mb-2">Raw / binary response bodies</h3>
+      <p class="text-soft text-[14px] leading-relaxed mb-3">Four endpoints return bytes rather than JSON: synthesized speech, a video file, and two file-content downloads. <span class="mono-inline">requestObject()</span> decoded unconditionally. A sibling <span class="mono-inline">requestContent()</span> now returns a <span class="mono-inline">BinaryResponse</span> &mdash; raw bytes, the upstream Content-Type, and <span class="mono-inline">saveTo()</span> &mdash; while still raising API errors, which arrive as JSON even here.</p>
+      <div class="code">// src/Transporters/HttpTransporter.php:74 — every response is decoded as JSON
+$contents = $response-&gt;getBody()-&gt;getContents();
+$data = json_decode($contents, true, flags: JSON_THROW_ON_ERROR);
+
+// There is no accessor that hands back the raw bytes, so an audio/*,
+// video/mp4 or application/octet-stream body throws before it reaches
+// the caller.</div>
+      <div class="mt-3 bg-panel border-l-2 border-good pl-3 py-2 pr-3 rounded-r">
+        <div class="kicker mb-1">unblocked</div><p class="text-soft text-xs leading-relaxed"><span class="mono-inline">POST /audio/speech</span>, <span class="mono-inline">GET /files/{id}/content</span>, <span class="mono-inline">GET /videos/{jobId}/content</span>, <span class="mono-inline">GET /containers/&hellip;/content</span>.</p>
+      </div>
+    </article>
+
+    <article class="card p-6 lg:p-7 lg:col-span-2 reveal r3">
+      <div class="flex items-center gap-2.5 mb-3 flex-wrap">
+        <span class="badge" style="background:#1A7F37">3</span>
+        <span class="pill pill-good"><span class="dot"></span>solved &middot; 1 op</span>
+        <span class="font-mono text-[11px] text-mute ml-auto">ImageStreamEvent</span>
+      </div>
+      <h3 class="h-mono text-lg lg:text-xl leading-snug mb-2">SSE outside chat</h3>
+      <p class="text-soft text-[14px] leading-relaxed mb-3"><span class="mono-inline">POST /images</span> is the only new endpoint that streams, and the prediction held: no transport work was needed. <span class="mono-inline">requestStream()</span> already returns a raw PSR-7 response and <span class="mono-inline">StreamResponse</span> is generic over an event class, so it took three typed frames &mdash; <span class="mono-inline">image_generation.completed</span>, <span class="mono-inline">.partial_image</span>, <span class="mono-inline">.text_chunk</span> &mdash; plus the usual base-class fallback for frames OpenRouter adds later.</p>
+    </article>
+  </div>
+</div></section>
+
+<section class="border-t border-line" id="roadmap"><div class="max-w-[1200px] mx-auto px-6 lg:px-10 py-14 lg:py-18">
+  <header class="grid grid-cols-12 gap-6 lg:gap-10 items-end mb-8 lg:mb-10">
+    <div class="col-span-12 lg:col-span-7">
+      <div class="section-no mb-2 reveal r1">&sect; 03 &mdash; WHAT IS LEFT</div>
+      <h2 class="h-mono text-2xl sm:text-3xl lg:text-[32px] leading-tight tracking-tightish reveal r2">Two waves of straight typing</h2>
+    </div>
+    <div class="col-span-12 lg:col-span-5"><p class="text-soft text-base leading-relaxed reveal r3">Nothing left depends on anything else. Both waves are additive, independently shippable, and reachable through the raw transporter in the meantime.<span class="kicker block mt-2">45 operations &middot; 2 waves remaining</span></p></div>
+  </header>
+
+  <div class="card p-6 lg:p-7 mb-6 reveal r1">
+    <div class="flex items-center gap-2.5 mb-3 flex-wrap">
+      <span class="badge" style="background:#1A7F37">&#10003;</span>
+      <span class="pill pill-good"><span class="dot"></span>waves 1&ndash;2 delivered</span>
+      <span class="pill pill-ink"><span class="dot"></span>18 endpoints</span>
+      <span class="font-mono text-[11px] text-mute ml-auto">+59 tests</span>
+    </div>
+    <h3 class="h-mono text-lg lg:text-xl leading-snug mb-3">Transport primitives, then the media surface</h3>
+    <p class="text-soft text-[14px] leading-relaxed">Wave 1 shipped <span class="mono-inline">Payload::upload()</span> with an <span class="mono-inline">UploadedFile</span> part and <span class="mono-inline">requestContent()</span> returning a <span class="mono-inline">BinaryResponse</span>. Wave 2 built Files, Containers, Videos, Images and Audio on top &mdash; five resources, 18 endpoints, three image SSE frames. The prerequisite landed and was tested on its own before any resource used it.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
+      <article class="card p-6 lg:p-7 reveal r1">
+        <div class="flex items-center gap-2.5 mb-3 flex-wrap">
+          <span class="badge" style="background:#9A6700">3</span>
+          <span class="pill pill-ink"><span class="dot"></span>24 endpoints</span>
+          <span class="font-mono text-[11px] text-mute ml-auto">wave 3</span>
+        </div>
+        <h3 class="h-mono text-lg lg:text-xl leading-snug mb-3">Presets, workspaces &amp; credentials</h3>
+        <div class="flex flex-wrap gap-1.5 mb-3"><span class="codeline">Workspaces (12)</span><span class="codeline">Presets (7)</span><span class="codeline">BYOK (5)</span></div>
+        <p class="text-soft text-[14px] leading-relaxed">The largest remaining pure-JSON block, and the one with existing hooks: <span class='mono-inline'>workspace_id</span> already flows through keys, guardrails and activity, and preset-scoped inference reuses the chat/messages/responses request objects verbatim.</p>
+      </article>
+      <article class="card p-6 lg:p-7 reveal r2">
+        <div class="flex items-center gap-2.5 mb-3 flex-wrap">
+          <span class="badge" style="background:#1A7F37">4</span>
+          <span class="pill pill-ink"><span class="dot"></span>21 endpoints</span>
+          <span class="font-mono text-[11px] text-mute ml-auto">wave 4</span>
+        </div>
+        <h3 class="h-mono text-lg lg:text-xl leading-snug mb-3">Reporting, admin &amp; long tail</h3>
+        <div class="flex flex-wrap gap-1.5 mb-3"><span class="codeline">SCIM (6)</span><span class="codeline">Observability (5)</span><span class="codeline">Datasets (3)</span><span class="codeline">Analytics (2)</span><span class="codeline">Generation+ (2)</span><span class="codeline">Benchmarks (2)</span><span class="codeline">Model detail (1)</span></div>
+        <p class="text-soft text-[14px] leading-relaxed">Mostly read-only GETs against flat payloads. Low risk, low urgency — and reachable through the raw transporter meanwhile, so nothing is blocked on it.</p>
+      </article>
+  </div>
+</div></section>
+
+<section class="border-t border-line bg-panel" id="done"><div class="max-w-[1200px] mx-auto px-6 lg:px-10 py-14 lg:py-18">
+  <header class="grid grid-cols-12 gap-6 lg:gap-10 items-end mb-8 lg:mb-10">
+    <div class="col-span-12 lg:col-span-7">
+      <div class="section-no mb-2 reveal r1">&sect; 04 &mdash; DELIVERED</div>
+      <h2 class="h-mono text-2xl sm:text-3xl lg:text-[32px] leading-tight tracking-tightish reveal r2">Everything shipped so far</h2>
+    </div>
+    <div class="col-span-12 lg:col-span-5"><p class="text-soft text-base leading-relaxed reveal r3">The spec catch-up that preceded this report, plus waves 1 and 2. Each row is TDD-driven: the test was written and watched fail before the code existed.<span class="kicker block mt-2">test suite: 428 &rarr; 628 tests</span></p></div>
+  </header>
+
+  <div class="card p-5 lg:p-6 overflow-x-auto reveal r1">
+    <table class="dt">
+      <thead><tr><th>delivered</th><th>count</th><th>notes</th></tr></thead>
+      <tbody>
+        <tr><td>Transport: multipart uploads</td><td><span class="num">1</span> primitive</td><td class="text-left text-soft"><span class="mono-inline">Payload::upload()</span> + <span class="mono-inline">UploadedFile</span>; RFC 7578 body with repeated <span class="mono-inline">name[]</span> parts.</td></tr>
+        <tr><td>Transport: binary responses</td><td><span class="num">1</span> primitive</td><td class="text-left text-soft"><span class="mono-inline">requestContent()</span> &rarr; <span class="mono-inline">BinaryResponse</span> with <span class="mono-inline">saveTo()</span>; API errors still raised.</td></tr>
+        <tr><td>Files &amp; container files</td><td><span class="num">9</span> endpoints</td><td class="text-left text-soft">Upload, list, retrieve, download, delete, promote. <span class="mono-inline">_shape</span> union normalised.</td></tr>
+        <tr><td>Images</td><td><span class="num">3</span> endpoints</td><td class="text-left text-soft">Buffered and streamed generation, plus 3 typed SSE frames and the model catalogue.</td></tr>
+        <tr><td>Videos</td><td><span class="num">4</span> endpoints</td><td class="text-left text-soft">Submit, poll, download, catalogue. <span class="mono-inline">isTerminal()</span> drives the polling loop.</td></tr>
+        <tr><td>Audio</td><td><span class="num">2</span> endpoints</td><td class="text-left text-soft">Speech to raw audio; transcription from inline JSON or a multipart upload.</td></tr>
+        <tr><td>Coverage manifest + CI drift check</td><td><span class="num">101</span> ops tracked</td><td class="text-left text-soft">Every gap in this report is a reviewed entry; a new one fails the build.</td></tr>
+        <tr><td>Unknown-field passthrough</td><td><span class="num">19</span> value objects</td><td class="text-left text-soft">New response fields reach callers via <span class="mono-inline">$extras</span> before wrappers exist.</td></tr>
+        <tr><td>Chat request parameters</td><td><span class="num">9</span> added</td><td class="text-left text-soft">Closes the sampling, caching and agent-loop gap on the covered surface.</td></tr>
+        <tr><td>Server-tool types</td><td><span class="num">25</span> across 3 endpoints</td><td class="text-left text-soft">The <span class="mono-inline">openrouter:*</span> family is typed; media tools now have a home.</td></tr>
+        <tr><td>Stream event classes</td><td><span class="num">19</span> added</td><td class="text-left text-soft">Establishes the pattern the <span class="mono-inline">/images</span> SSE events will follow.</td></tr>
+        <tr><td>Plugins</td><td><span class="num">4</span> new + 1 extended</td><td class="text-left text-soft">Plugin factory is current with the live spec.</td></tr>
+        <tr><td>Enum cases</td><td><span class="num">4</span> added</td><td class="text-left text-soft">Typed request paths accept the values the API now documents.</td></tr>
+        <tr><td>Tests</td><td><span class="num">628</span> / 2,115 assertions</td><td class="text-left text-soft">+200 tests over the starting suite, all written before the code that satisfies them.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div></section>
+
+<footer class="border-t border-line bg-canvas"><div class="max-w-[1200px] mx-auto px-6 lg:px-10 py-11 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-soft">
+  <div><div class="kicker mb-3 text-ink">methodology</div><p class="leading-relaxed">Operations extracted from the live OpenAPI document and diffed against the SDK&rsquo;s typed resources. Transport verdicts read from each operation&rsquo;s declared request and 2xx response content types, then checked against <span class="font-mono">src/Transporters/HttpTransporter.php</span> and <span class="font-mono">src/ValueObjects/Transporter/Payload.php</span>. Revision 2 records waves 1 and 2 as delivered; the family table keeps the original grouping so the two revisions stay comparable. No effort estimates in days &mdash; sequencing is driven by operation count, dependency and transport need.</p></div>
+  <div><div class="kicker mb-3 text-ink">sources</div><p class="leading-relaxed"><span class="font-mono">https://openrouter.ai/openapi.yaml</span> retrieved September 3, 2026 (101 operations, 78 paths).<br><span class="font-mono">api-coverage.json</span> &mdash; 56 covered, 45 known gaps.<br>Test counts from <span class="font-mono">vendor/bin/phpunit</span> on the same day.</p></div>
+  <div><div class="kicker mb-3 text-ink">generated</div><p class="leading-relaxed">September 3, 2026 &middot; revision 2.<br>Project <span class="font-mono">openrouter-php-client</span> &middot; session <span class="font-mono">ebdcfe49-9a3b-422e-9ad6-83fb02b2668b</span></p></div>
+</div></footer>
+
+<script>
+(function(){
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'-5% 0px -5% 0px'});
+  document.querySelectorAll('.reveal').forEach(e=>io.observe(e));
+  requestAnimationFrame(()=>document.querySelectorAll('.reveal').forEach(e=>{const r=e.getBoundingClientRect();if(r.top<innerHeight&&r.bottom>0)e.classList.add('in')}));
+  function cnt(el){const t=parseFloat(el.dataset.target||'0'),dec=parseInt(el.dataset.dec||'0'),s=performance.now();function st(n){const k=Math.min(1,(n-s)/1200);el.textContent=(t*(1-Math.pow(1-k,3))).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});if(k<1)requestAnimationFrame(st)}requestAnimationFrame(st)}
+  const cio=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){cnt(e.target);cio.unobserve(e.target)}})},{threshold:.4});
+  document.querySelectorAll('[data-counter]').forEach(e=>cio.observe(e));
+  const bio=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.style.width=e.target.dataset.pct+'%';bio.unobserve(e.target)}})},{threshold:.3});
+  document.querySelectorAll('[data-bar]').forEach(e=>bio.observe(e));
+})();
+</script>
+</body>
+</html>
