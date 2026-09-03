@@ -4,13 +4,24 @@ All notable changes to this project are documented here.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Entries
-are grouped as **Features** (`feat`), **Fixes** (`fix`) and **BC breaks**.
+are grouped as **Features** (`feat`), **Fixes** (`fix`), **BC breaks** and
+**Documentation** (`docs`).
 
 Upgrading from a 0.x release? See [UPGRADE.md](UPGRADE.md).
 
 ## [Unreleased]
 
 Nothing yet.
+
+## [1.0.1] - 2026-09-03
+
+No code changes — 1.0.1 exists so the guides ship inside the released package.
+
+### Documentation
+
+- Added this changelog, covering every release back to 0.1.0.
+- Added [UPGRADE.md](UPGRADE.md) for the 0.x → 1.0 migration, and linked both from the
+  README.
 
 ## [1.0.0] - 2026-09-03
 
@@ -118,7 +129,8 @@ interfaces or calls the affected constructors positionally. See
 - Initial release: `chat()`, `models()` and `responses()`, with typed request and
   response value objects, SSE streaming and PSR-18 HTTP transport.
 
-[Unreleased]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v0.1.0...v0.2.0
