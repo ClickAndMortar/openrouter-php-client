@@ -39,6 +39,19 @@ final class Headers
         ]);
     }
 
+    /**
+     * Drops the `Authorization` header. Used by endpoints that authenticate
+     * with a credential carried in the request body rather than the API key —
+     * `POST /oauth/token` presents a subject token instead.
+     */
+    public function withoutAuthorization(): self
+    {
+        $headers = $this->headers;
+        unset($headers['Authorization']);
+
+        return new self($headers);
+    }
+
     public function withCustomHeader(string $name, string $value): self
     {
         return new self([

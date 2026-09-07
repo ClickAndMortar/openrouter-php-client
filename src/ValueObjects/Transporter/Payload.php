@@ -24,6 +24,7 @@ final class Payload
         private readonly ResourceUri $uri,
         private readonly array $parameters = [],
         private readonly array $query = [],
+        private readonly bool $withoutAuthorization = false,
     ) {
     }
 
@@ -94,6 +95,26 @@ final class Payload
         return new self(ContentType::MULTIPART, Method::POST, ResourceUri::create($resource), $fields, $query);
     }
 
+    /**
+     * Builds an `application/x-www-form-urlencoded` POST.
+     *
+     * Null fields are dropped, so optional parameters can be passed through
+     * unconditionally. `$withoutAuthorization` omits the `Authorization`
+     * header for endpoints that authenticate from the body instead.
+     *
+     * @param  array<string, scalar|null>  $fields
+     */
+    public static function form(string $resource, array $fields, bool $withoutAuthorization = false): self
+    {
+        return new self(
+            ContentType::FORM,
+            Method::POST,
+            ResourceUri::create($resource),
+            array_filter($fields, static fn (mixed $value): bool => $value !== null),
+            withoutAuthorization: $withoutAuthorization,
+        );
+    }
+
     public function toRequest(BaseUri $baseUri, Headers $headers, QueryParams $queryParams): RequestInterface
     {
         $requestFactory = Psr17FactoryDiscovery::findRequestFactory();
@@ -110,18 +131,30 @@ final class Payload
             $uri .= '?'.http_build_query($query);
         }
 
+        if ($this->withoutAuthorization) {
+            $headers = $headers->withoutAuthorization();
+        }
+
         $body = null;
 
         if ($this->contentType === ContentType::MULTIPART) {
             $boundary = bin2hex(random_bytes(16));
             $headers = $headers->withContentType($this->contentType, '; boundary='.$boundary);
             $body = $streamFactory->createStream($this->encodeMultipart($boundary));
+        } elseif ($this->contentType === ContentType::FORM) {
+            $headers = $headers->withContentType($this->contentType);
+            $body = $streamFactory->createStream(http_build_query($this->parameters));
         } else {
             $headers = $headers->withContentType($this->contentType);
 
             if ($this->method === Method::POST || $this->method === Method::PATCH || $this->method === Method::PUT) {
                 $body = $streamFactory->createStream(
-                    json_encode($this->parameters, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                    json_encode(
+                        // An empty body must serialise as `{}`, not `[]` — the
+                        // API expects a JSON object even when it carries no fields.
+                        $this->parameters === [] ? new \stdClass() : $this->parameters,
+                        JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE,
+                    ),
                 );
             }
         }

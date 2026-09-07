@@ -11,5 +11,6 @@ enum ContentType: string
 {
     case JSON = 'application/json';
     case MULTIPART = 'multipart/form-data';
+    case FORM = 'application/x-www-form-urlencoded';
     case TEXT_PLAIN = 'text/plain';
 }
