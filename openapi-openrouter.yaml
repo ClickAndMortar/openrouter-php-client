@@ -11,6 +11,7 @@ components:
     AppDisplayName:
       name: X-OpenRouter-Title
       in: header
+      x-speakeasy-name-override: appTitle
       schema:
         type: string
       description: |
@@ -18,6 +19,7 @@ components:
     AppCategories:
       name: X-OpenRouter-Categories
       in: header
+      x-speakeasy-name-override: appCategories
       schema:
         type: string
       description: |
@@ -3637,6 +3639,7 @@ components:
               - $ref: '#/components/schemas/OpenAIResponseCustomToolCallOutput'
               - $ref: '#/components/schemas/ApplyPatchCallItem'
               - $ref: '#/components/schemas/ApplyPatchCallOutputItem'
+              - $ref: '#/components/schemas/ConfigurationUpdateItem'
           type: 'array'
         - type: 'null'
       example:
@@ -4043,6 +4046,7 @@ components:
           type: 'integer'
         error:
           $ref: '#/components/schemas/ResponsesErrorField'
+          nullable: true
         frequency_penalty:
           format: 'double'
           type:
@@ -4052,16 +4056,20 @@ components:
           type: 'string'
         incomplete_details:
           $ref: '#/components/schemas/IncompleteDetails'
+          nullable: true
         instructions:
           $ref: '#/components/schemas/BaseInputs'
+          nullable: true
         max_output_tokens:
           type:
             - 'integer'
             - 'null'
+          nullable: true
         max_tool_calls:
           type:
             - 'integer'
             - 'null'
+          nullable: true
         metadata:
           $ref: '#/components/schemas/RequestMetadata'
         model:
@@ -4118,6 +4126,7 @@ components:
           $ref: '#/components/schemas/PromptCacheOptions'
         reasoning:
           $ref: '#/components/schemas/BaseReasoningConfig'
+          nullable: true
         safety_identifier:
           type:
             - 'string'
@@ -4135,6 +4144,7 @@ components:
             - 'null'
         text:
           $ref: '#/components/schemas/TextConfig'
+          nullable: true
         tool_choice:
           $ref: '#/components/schemas/OpenAIResponsesToolChoice'
         tools:
@@ -4184,6 +4194,7 @@ components:
           type: 'array'
         top_logprobs:
           type: 'integer'
+          nullable: true
         top_p:
           format: 'double'
           type:
@@ -4191,6 +4202,7 @@ components:
             - 'null'
         truncation:
           $ref: '#/components/schemas/Truncation'
+          nullable: true
         usage:
           $ref: '#/components/schemas/OpenAIResponsesUsage'
         user:
@@ -4720,6 +4732,7 @@ components:
         - 'perplexity'
         - 'phala'
         - 'poolside'
+        - 'prime-intellect'
         - 'quiver'
         - 'recraft'
         - 'reka'
@@ -6035,6 +6048,20 @@ components:
         name: 'Assistant Config'
         role: 'system'
       properties:
+        configuration_update:
+          additionalProperties: false
+          description: 'OpenRouter extension. Changes reasoning effort from this point in the conversation onward without invalidating the prompt cache for the preceding turns. Place it on a content-less system message (`content: ""`) directly before the user message it should apply to, and keep it at that position in later requests. Equivalent to the OpenAI Responses `configuration_update` input item and the Anthropic Messages per-message `output_config.effort`.'
+          example:
+            reasoning:
+              effort: 'low'
+          properties:
+            reasoning:
+              $ref: '#/components/schemas/ConfigurationUpdateReasoning'
+          required:
+            - 'reasoning'
+          type:
+            - 'object'
+            - 'null'
         content:
           anyOf:
             - type: 'string'
@@ -6696,6 +6723,49 @@ components:
         - 'display_height'
         - 'display_width'
         - 'environment'
+      type: 'object'
+    ConfigurationUpdateItem:
+      description: 'Changes reasoning effort from this point in the conversation onward without invalidating the prompt cache for the preceding items. Place it before the user message it should apply to; it stays in effect until another configuration update. Two adjacent configuration updates are rejected. Only supported by models that accept mid-conversation effort changes.'
+      example:
+        reasoning:
+          effort: 'low'
+        type: 'configuration_update'
+      properties:
+        id:
+          type:
+            - 'string'
+            - 'null'
+        reasoning:
+          $ref: '#/components/schemas/ConfigurationUpdateReasoning'
+        type:
+          enum:
+            - 'configuration_update'
+          type: 'string'
+      required:
+        - 'type'
+        - 'reasoning'
+      type: 'object'
+    ConfigurationUpdateReasoning:
+      additionalProperties: false
+      description: 'Reasoning settings applied from this point in the conversation onward'
+      example:
+        effort: 'low'
+      properties:
+        effort:
+          description: 'Reasoning effort to apply from this point in the conversation onward'
+          enum:
+            - 'max'
+            - 'xhigh'
+            - 'high'
+            - 'medium'
+            - 'low'
+            - 'minimal'
+            - 'none'
+          example: 'low'
+          type: 'string'
+          x-speakeasy-unknown-values: allow
+      required:
+        - 'effort'
       type: 'object'
     ConflictResponse:
       description: 'Conflict - Resource conflict or concurrent modification'
@@ -7648,6 +7718,16 @@ components:
           description: 'When true, request/response bodies are not forwarded — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          default:
+            - 'global'
+          description: 'Data regions this destination applies to. `eu` is accepted as an alias for `europe` and normalizes to `europe`. Omitting this field defaults to [''global'']; the array must be non-empty.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegionInput'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -7703,6 +7783,8 @@ components:
           id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
           name: 'Production Langfuse'
           privacy_mode: false
+          regions:
+            - 'global'
           sampling_rate: 1
           type: 'langfuse'
           updated_at: '2025-08-24T15:45:00Z'
@@ -7770,6 +7852,13 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/ScimGroupMapping'
+      required:
+        - 'data'
+      type: 'object'
+    CreateScimSyncJobResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/ScimSyncJob'
       required:
         - 'data'
       type: 'object'
@@ -8115,21 +8204,25 @@ components:
           type:
             - 'number'
             - 'null'
+          nullable: true
         presence_penalty:
           format: 'double'
           type:
             - 'number'
             - 'null'
+          nullable: true
         repetition_penalty:
           format: 'double'
           type:
             - 'number'
             - 'null'
+          nullable: true
         temperature:
           format: 'double'
           type:
             - 'number'
             - 'null'
+          nullable: true
         top_k:
           type:
             - 'integer'
@@ -8139,6 +8232,7 @@ components:
           type:
             - 'number'
             - 'null'
+          nullable: true
       type:
         - 'object'
         - 'null'
@@ -10088,6 +10182,8 @@ components:
           id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
           name: 'Production Langfuse'
           privacy_mode: false
+          regions:
+            - 'global'
           sampling_rate: 1
           type: 'langfuse'
           updated_at: '2025-08-24T15:45:00Z'
@@ -10156,6 +10252,13 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/ScimGroupMapping'
+      required:
+        - 'data'
+      type: 'object'
+    GetScimSyncJobResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/ScimSyncJob'
       required:
         - 'data'
       type: 'object'
@@ -11754,6 +11857,7 @@ components:
               - $ref: '#/components/schemas/ItemReferenceItem'
               - $ref: '#/components/schemas/AdditionalToolsItem'
               - $ref: '#/components/schemas/AgentMessageItem'
+              - $ref: '#/components/schemas/ConfigurationUpdateItem'
           type: 'array'
       description: 'Input for a response request - can be a string or array of items'
       example:
@@ -12268,6 +12372,8 @@ components:
             id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
             name: 'Production Langfuse'
             privacy_mode: false
+            regions:
+              - 'global'
             sampling_rate: 1
             type: 'langfuse'
             updated_at: '2025-08-24T15:45:00Z'
@@ -12604,9 +12710,7 @@ components:
         arguments:
           type: 'string'
         error:
-          type:
-            - 'string'
-            - 'null'
+          $ref: '#/components/schemas/McpToolCallError'
         id:
           type: 'string'
         name:
@@ -12627,6 +12731,26 @@ components:
         - 'name'
         - 'arguments'
         - 'server_label'
+      type: 'object'
+    McpHttpError:
+      description: 'The MCP server request failed at the HTTP layer'
+      example:
+        code: 503
+        message: 'Service Unavailable'
+        type: 'http_error'
+      properties:
+        code:
+          type: 'integer'
+        message:
+          type: 'string'
+        type:
+          enum:
+            - 'http_error'
+          type: 'string'
+      required:
+        - 'type'
+        - 'code'
+        - 'message'
       type: 'object'
     McpListToolsItem:
       description: 'List of available MCP tools from a server'
@@ -12678,6 +12802,26 @@ components:
         - 'id'
         - 'server_label'
         - 'tools'
+      type: 'object'
+    McpProtocolError:
+      description: 'The MCP server returned a protocol-level error'
+      example:
+        code: -32601
+        message: 'Method not found'
+        type: 'mcp_protocol_error'
+      properties:
+        code:
+          type: 'integer'
+        message:
+          type: 'string'
+        type:
+          enum:
+            - 'mcp_protocol_error'
+          type: 'string'
+      required:
+        - 'type'
+        - 'code'
+        - 'message'
       type: 'object'
     McpServerTool:
       description: 'MCP (Model Context Protocol) tool configuration'
@@ -12758,6 +12902,32 @@ components:
       required:
         - 'type'
         - 'server_label'
+      type: 'object'
+    McpToolCallError:
+      anyOf:
+        - type: 'string'
+        - $ref: '#/components/schemas/McpProtocolError'
+        - $ref: '#/components/schemas/McpToolExecutionError'
+        - $ref: '#/components/schemas/McpHttpError'
+        - type: 'null'
+      description: 'Error from an MCP tool call, either a plain message or a structured error'
+      example:
+        code: 503
+        message: 'Service Unavailable'
+        type: 'http_error'
+    McpToolExecutionError:
+      description: 'The MCP tool ran but reported a failure'
+      example:
+        content: 'Connection refused'
+        type: 'mcp_tool_execution_error'
+      properties:
+        content: {}
+        type:
+          enum:
+            - 'mcp_tool_execution_error'
+          type: 'string'
+      required:
+        - 'type'
       type: 'object'
     MemberAssignment:
       example:
@@ -14213,6 +14383,7 @@ components:
                 - 'OpenInference'
                 - 'Parasail'
                 - 'Poolside'
+                - 'PrimeIntellect'
                 - 'Perceptron'
                 - 'Perplexity'
                 - 'Phala'
@@ -15088,6 +15259,83 @@ components:
         - 'code'
         - 'message'
       type: 'object'
+    OAuthErrorResponse:
+      description: 'RFC 6749 §5.2 error response.'
+      example:
+        error: 'invalid_grant'
+        error_description: 'The subject token was not accepted.'
+      properties:
+        error:
+          enum:
+            - 'invalid_request'
+            - 'invalid_grant'
+            - 'unsupported_grant_type'
+            - 'invalid_scope'
+            - 'server_error'
+            - 'temporarily_unavailable'
+          type: 'string'
+          x-speakeasy-unknown-values: allow
+        error_description:
+          type: 'string'
+      required:
+        - 'error'
+        - 'error_description'
+      type: 'object'
+    OAuthJwks:
+      description: 'RFC 7517 JWK Set of the keys OpenRouter signs access tokens with.'
+      example:
+        keys:
+          - alg: 'ES256'
+            crv: 'P-256'
+            kid: 'or-2026-09'
+            kty: 'EC'
+            use: 'sig'
+            x: 'f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU'
+            'y': 'x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0'
+      properties:
+        keys:
+          items:
+            additionalProperties: false
+            properties:
+              alg:
+                enum:
+                  - 'ES256'
+                type: 'string'
+              crv:
+                enum:
+                  - 'P-256'
+                type: 'string'
+              kid:
+                minLength: 1
+                type: 'string'
+              kty:
+                enum:
+                  - 'EC'
+                type: 'string'
+              use:
+                enum:
+                  - 'sig'
+                type: 'string'
+              x:
+                pattern: '^[A-Za-z0-9_-]+$'
+                type: 'string'
+              'y':
+                pattern: '^[A-Za-z0-9_-]+$'
+                type: 'string'
+            required:
+              - 'kty'
+              - 'crv'
+              - 'kid'
+              - 'x'
+              - 'y'
+              - 'alg'
+              - 'use'
+            type: 'object'
+          minItems: 1
+          type: 'array'
+      required:
+        - 'keys'
+      type: 'object'
     ObservabilityArizeDestination:
       example:
         api_key_hashes: null
@@ -15105,6 +15353,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Arize'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'arize'
         updated_at: '2025-08-24T15:45:00Z'
@@ -15180,6 +15430,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -15201,6 +15459,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -15231,6 +15490,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Braintrust'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'braintrust'
         updated_at: '2025-08-24T15:45:00Z'
@@ -15301,6 +15562,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -15322,6 +15591,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -15354,6 +15624,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production ClickHouse'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'clickhouse'
         updated_at: '2025-08-24T15:45:00Z'
@@ -15433,6 +15705,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -15454,6 +15734,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -15484,6 +15765,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Datadog'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'datadog'
         updated_at: '2025-08-24T15:45:00Z'
@@ -15557,6 +15840,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -15578,6 +15869,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -15592,6 +15884,24 @@ components:
         - 'type'
         - 'config'
       type: 'object'
+    ObservabilityDataRegion:
+      enum:
+        - 'global'
+        - 'europe'
+        - 'us'
+      example: 'global'
+      type: 'string'
+      x-speakeasy-unknown-values: allow
+    ObservabilityDataRegionInput:
+      description: '`eu` is accepted as an alias for `europe` and normalizes to `europe`.'
+      enum:
+        - 'global'
+        - 'europe'
+        - 'us'
+        - 'eu'
+      example: 'global'
+      type: 'string'
+      x-speakeasy-unknown-values: allow
     ObservabilityDestination:
       discriminator:
         mapping:
@@ -15628,6 +15938,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Langfuse'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'langfuse'
         updated_at: '2025-08-24T15:45:00Z'
@@ -15761,6 +16073,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Grafana'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'grafana'
         updated_at: '2025-08-24T15:45:00Z'
@@ -15831,6 +16145,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -15852,6 +16174,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -15882,6 +16205,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Langfuse'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'langfuse'
         updated_at: '2025-08-24T15:45:00Z'
@@ -15952,6 +16277,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -15973,6 +16306,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -16003,6 +16337,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production LangSmith'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'langsmith'
         updated_at: '2025-08-24T15:45:00Z'
@@ -16077,6 +16413,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -16098,6 +16442,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -16127,6 +16472,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production New Relic'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'newrelic'
         updated_at: '2025-08-24T15:45:00Z'
@@ -16197,6 +16544,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -16218,6 +16573,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -16248,6 +16604,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Opik'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'opik'
         updated_at: '2025-08-24T15:45:00Z'
@@ -16319,6 +16677,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -16340,6 +16706,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -16368,6 +16735,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production OTel Collector'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'otel-collector'
         updated_at: '2025-08-24T15:45:00Z'
@@ -16430,6 +16799,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -16451,6 +16828,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -16480,6 +16858,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production PostHog'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'posthog'
         updated_at: '2025-08-24T15:45:00Z'
@@ -16546,6 +16926,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -16567,6 +16955,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -16596,6 +16985,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Ramp'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'ramp'
         updated_at: '2025-08-24T15:45:00Z'
@@ -16663,6 +17054,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -16684,6 +17083,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -16714,6 +17114,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production S3'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 's3'
         updated_at: '2025-08-24T15:45:00Z'
@@ -16800,6 +17202,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -16821,6 +17231,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -16850,6 +17261,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Sentry'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'sentry'
         updated_at: '2025-08-24T15:45:00Z'
@@ -16917,6 +17330,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -16938,6 +17359,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -16967,6 +17389,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Snowflake'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'snowflake'
         updated_at: '2025-08-24T15:45:00Z'
@@ -17048,6 +17472,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -17069,6 +17501,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -17100,6 +17533,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Weave'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'weave'
         updated_at: '2025-08-24T15:45:00Z'
@@ -17174,6 +17609,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -17195,6 +17638,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -17223,6 +17667,8 @@ components:
         id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
         name: 'Production Webhook'
         privacy_mode: false
+        regions:
+          - 'global'
         sampling_rate: 1
         type: 'webhook'
         updated_at: '2025-08-24T15:45:00Z'
@@ -17291,6 +17737,14 @@ components:
           description: 'When true, request/response bodies are not forwarded to this destination — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. Requests served in a region only fan out to destinations that include that region.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegion'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate for events sent to this destination, between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -17312,6 +17766,7 @@ components:
       required:
         - 'id'
         - 'workspace_id'
+        - 'regions'
         - 'name'
         - 'enabled'
         - 'privacy_mode'
@@ -21138,6 +21593,7 @@ components:
         - 'OpenInference'
         - 'Parasail'
         - 'Poolside'
+        - 'PrimeIntellect'
         - 'Perceptron'
         - 'Perplexity'
         - 'Phala'
@@ -21479,6 +21935,9 @@ components:
           additionalProperties: {}
           type: 'object'
         poolside:
+          additionalProperties: {}
+          type: 'object'
+        prime-intellect:
           additionalProperties: {}
           type: 'object'
         quiver:
@@ -21886,6 +22345,7 @@ components:
             - 'OpenInference'
             - 'Parasail'
             - 'Poolside'
+            - 'PrimeIntellect'
             - 'Perceptron'
             - 'Perplexity'
             - 'Phala'
@@ -23063,6 +23523,7 @@ components:
             - 'failed_to_download_image'
             - 'image_file_not_found'
             - 'bio_policy'
+            - 'misalignment_policy_violation'
             - 'data_residency_mismatch'
           type: 'string'
           x-speakeasy-unknown-values: allow
@@ -23383,8 +23844,8 @@ components:
       type: 'string'
       x-speakeasy-unknown-values: allow
     SandboxSleepAfterSeconds:
-      description: 'How long (in seconds) the container stays warm after its last command before sleeping, freeing its capacity slot. Idle-based: each command renews the timer. Defaults to 900 (15 minutes); capped at 14400 (4 hours).'
-      example: 900
+      description: 'How long (in seconds) the container stays warm after its last command before sleeping, freeing its capacity slot. Idle-based: each command renews the timer. Defaults to 300 (5 minutes); capped at 14400 (4 hours).'
+      example: 300
       type: 'integer'
     ScimGroup:
       example:
@@ -23457,6 +23918,59 @@ components:
         - 'role'
         - 'created_at'
         - 'updated_at'
+      type: 'object'
+    ScimSyncJob:
+      properties:
+        created_at:
+          description: 'Time when the sync job was created.'
+          type: 'string'
+        deleted_groups:
+          description: 'Number of groups deleted, when the job completed successfully.'
+          type:
+            - 'integer'
+            - 'null'
+        error_message:
+          description: 'Stable error message when the job failed.'
+          type:
+            - 'string'
+            - 'null'
+        finished_at:
+          description: 'Time when synchronization finished.'
+          type:
+            - 'string'
+            - 'null'
+        id:
+          description: 'Unique identifier for the sync job.'
+          format: 'uuid'
+          type: 'string'
+        started_at:
+          description: 'Time when synchronization started.'
+          type:
+            - 'string'
+            - 'null'
+        status:
+          description: 'Current status of the sync job: queued, running, succeeded, or failed.'
+          enum:
+            - 'queued'
+            - 'running'
+            - 'succeeded'
+            - 'failed'
+          type: 'string'
+          x-speakeasy-unknown-values: allow
+        synced_groups:
+          description: 'Number of groups synchronized, when the job completed successfully.'
+          type:
+            - 'integer'
+            - 'null'
+      required:
+        - 'id'
+        - 'status'
+        - 'synced_groups'
+        - 'deleted_groups'
+        - 'error_message'
+        - 'created_at'
+        - 'started_at'
+        - 'finished_at'
       type: 'object'
     SearchContextSizeEnum:
       description: 'Size of the search context for web search tools'
@@ -25122,6 +25636,92 @@ components:
       example:
         format:
           type: 'text'
+    TokenExchangeRequest:
+      description: 'RFC 8693 token exchange request body (application/x-www-form-urlencoded).'
+      example:
+        federation_policy_id: '4b2f7d1e-8c3a-4e5f-9a6b-1c2d3e4f5a6b'
+        grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange'
+        subject_token: '<jwt from your identity provider>'
+        subject_token_type: 'urn:ietf:params:oauth:token-type:jwt'
+      properties:
+        federation_policy_id:
+          description: 'The federation policy to evaluate, from Settings → Workload identity. Binds the exchange to one organization.'
+          example: '4b2f7d1e-8c3a-4e5f-9a6b-1c2d3e4f5a6b'
+          format: 'uuid'
+          type: 'string'
+        grant_type:
+          description: 'Must be `urn:ietf:params:oauth:grant-type:token-exchange`.'
+          enum:
+            - 'urn:ietf:params:oauth:grant-type:token-exchange'
+          example: 'urn:ietf:params:oauth:grant-type:token-exchange'
+          type: 'string'
+        requested_token_type:
+          description: 'Optional; when present must be `urn:ietf:params:oauth:token-type:access_token`.'
+          enum:
+            - 'urn:ietf:params:oauth:token-type:access_token'
+          example: 'urn:ietf:params:oauth:token-type:access_token'
+          type: 'string'
+        scope:
+          description: 'Optional; only `inference` is available.'
+          enum:
+            - 'inference'
+          example: 'inference'
+          type: 'string'
+        subject_token:
+          description: 'The JWT issued by your identity provider.'
+          example: '<jwt from your identity provider>'
+          maxLength: 16384
+          minLength: 1
+          type: 'string'
+        subject_token_type:
+          description: 'Must be `urn:ietf:params:oauth:token-type:jwt`.'
+          enum:
+            - 'urn:ietf:params:oauth:token-type:jwt'
+          example: 'urn:ietf:params:oauth:token-type:jwt'
+          type: 'string'
+      required:
+        - 'grant_type'
+        - 'subject_token'
+        - 'federation_policy_id'
+        - 'subject_token_type'
+      type: 'object'
+    TokenExchangeResponse:
+      description: 'RFC 8693 token exchange response.'
+      example:
+        access_token: '<short-lived openrouter access token jwt>'
+        expires_in: 900
+        issued_token_type: 'urn:ietf:params:oauth:token-type:access_token'
+        scope: 'inference'
+        token_type: 'Bearer'
+      properties:
+        access_token:
+          description: 'A short-lived JWT to send as `Authorization: Bearer` to the inference API.'
+          example: '<short-lived openrouter access token jwt>'
+          type: 'string'
+        expires_in:
+          description: 'Seconds until the access token expires: at most 15 minutes, and never later than the subject token expires.'
+          example: 900
+          type: 'integer'
+        issued_token_type:
+          enum:
+            - 'urn:ietf:params:oauth:token-type:access_token'
+          example: 'urn:ietf:params:oauth:token-type:access_token'
+          type: 'string'
+        scope:
+          example: 'inference'
+          type: 'string'
+        token_type:
+          enum:
+            - 'Bearer'
+          example: 'Bearer'
+          type: 'string'
+      required:
+        - 'access_token'
+        - 'issued_token_type'
+        - 'token_type'
+        - 'expires_in'
+        - 'scope'
+      type: 'object'
     ToolCallStatus:
       enum:
         - 'in_progress'
@@ -25266,6 +25866,7 @@ components:
           type:
             - 'integer'
             - 'null'
+          nullable: true
         is_moderated:
           description: 'Whether the top provider moderates content'
           example: true
@@ -25276,6 +25877,7 @@ components:
           type:
             - 'integer'
             - 'null'
+          nullable: true
       required:
         - 'is_moderated'
       type: 'object'
@@ -26183,6 +26785,14 @@ components:
           description: 'When true, request/response bodies are not forwarded — only metadata.'
           example: false
           type: 'boolean'
+        regions:
+          description: 'Data regions this destination applies to. `eu` is accepted as an alias for `europe` and normalizes to `europe`. Omitting this field keeps the current value; it cannot be cleared.'
+          example:
+            - 'global'
+          items:
+            $ref: '#/components/schemas/ObservabilityDataRegionInput'
+          minItems: 1
+          type: 'array'
         sampling_rate:
           description: 'Sampling rate between 0.0001 and 1 (1 = 100%).'
           example: 1
@@ -26206,6 +26816,8 @@ components:
           id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
           name: 'Production Langfuse'
           privacy_mode: false
+          regions:
+            - 'global'
           sampling_rate: 1
           type: 'langfuse'
           updated_at: '2025-08-24T15:45:00Z'
@@ -29020,7 +29632,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -29125,6 +29736,7 @@ paths:
               - 'perplexity'
               - 'phala'
               - 'poolside'
+              - 'prime-intellect'
               - 'quiver'
               - 'recraft'
               - 'reka'
@@ -30537,7 +31149,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
       responses:
         '200':
           content:
@@ -30849,7 +31460,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
       responses:
         '200':
           content:
@@ -31326,7 +31936,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 1000). When both offset and limit are omitted, the full list is returned'
           in: 'query'
           name: 'limit'
@@ -32580,7 +33189,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -32674,12 +33282,14 @@ paths:
           results: '$.data'
         type: 'offsetLimit'
     post:
-      description: 'Create a new guardrail for the authenticated user. A newly created guardrail enforces nothing until it is assigned to API keys or organization members; `workspace_id` places the guardrail in a workspace but does not apply it to that workspace''s traffic. To restrict all traffic in a workspace, update the workspace''s default guardrail instead. [Management key](/docs/guides/overview/auth/management-api-keys) required.'
+      description: 'Create a new guardrail for the authenticated user. A newly created guardrail enforces nothing until it is assigned to API keys or organization members; `workspace_id` places the guardrail in a workspace but does not apply it to that workspace''s traffic. To restrict all traffic in a workspace, update the workspace''s default guardrail instead. Set `allowed_data_regions` to enforce [In-Region Routing](/docs/guides/features/in-region-routing#enforcing-in-region-routing-with-guardrails): governed requests must arrive through one of the listed OpenRouter domains and are rejected with a 403 otherwise. [Management key](/docs/guides/overview/auth/management-api-keys) required.'
       operationId: 'createGuardrail'
       requestBody:
         content:
           application/json:
             example:
+              allowed_data_regions:
+                - 'europe'
               allowed_models: null
               allowed_providers:
                 - 'openai'
@@ -32970,7 +33580,7 @@ paths:
                   message: 'Invalid request parameters'
               schema:
                 $ref: '#/components/schemas/BadRequestResponse'
-          description: 'Invalid request, or an attempt to change a workspace default guardrail''s name (which is derived from its workspace and not editable).'
+          description: 'Invalid request, or an attempt to change a workspace default guardrail''s name (which is derived from its workspace and not editable; sending the current name unchanged is accepted).'
         '401':
           content:
             application/json:
@@ -32991,6 +33601,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotFoundResponse'
           description: 'Not Found - Resource does not exist'
+        '409':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 409
+                  message: 'Resource conflict. Please try again later.'
+              schema:
+                $ref: '#/components/schemas/ConflictResponse'
+          description: 'Guardrail name conflict — another guardrail in this workspace already uses the requested name.'
         '500':
           content:
             application/json:
@@ -33035,7 +33655,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -33294,7 +33913,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -33545,7 +34163,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -33630,7 +34247,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -34257,7 +34873,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Filter API keys by workspace ID. By default, keys in the default workspace are returned.'
           in: 'query'
           name: 'workspace_id'
@@ -34533,7 +35148,7 @@ paths:
         - 'API Keys'
       x-speakeasy-name-override: 'list'
     post:
-      description: 'Create a new API key for the authenticated user. The plaintext `key` is returned only in this response. Treat it as a write-only, sensitive value; it cannot be retrieved later. Authenticate with a [management key](/docs/guides/overview/auth/management-api-keys), or with a Connect client secret.'
+      description: 'Create a new API key for the authenticated user. The plaintext `key` is returned only in this response. Treat it as a write-only, sensitive value; it cannot be retrieved later. Authenticate with a [management key](/docs/guides/overview/auth/management-api-keys). The optional `external` object associates the key with a partner-defined user and lookup key.'
       operationId: 'createKeys'
       requestBody:
         content:
@@ -34566,6 +35181,23 @@ paths:
                   type:
                     - 'string'
                     - 'null'
+                external:
+                  description: 'Optional partner-defined identity associated with the created API key.'
+                  properties:
+                    api_key:
+                      description: 'Optional partner-supplied API key with a minimum length of 32 characters and sufficient entropy. Stored as a SHA-256 hash and never returned.'
+                      maxLength: 512
+                      minLength: 32
+                      type: 'string'
+                    user:
+                      description: 'Partner''s end-user identifier for attribution.'
+                      example: 'partner-user-123'
+                      maxLength: 512
+                      minLength: 1
+                      type: 'string'
+                  required:
+                    - 'user'
+                  type: 'object'
                 include_byok_in_limit:
                   description: 'Whether to include BYOK usage in the limit'
                   example: true
@@ -34890,7 +35522,7 @@ paths:
       - $ref: "#/components/parameters/AppCategories"
   /keys/{hash}:
     delete:
-      description: 'Delete an existing API key. Authenticate with a [management key](/docs/guides/overview/auth/management-api-keys), or with a Connect client secret. A client secret reaches only the keys that same client created; any other key responds as if it does not exist.'
+      description: 'Delete an existing API key. Authenticate with a [management key](/docs/guides/overview/auth/management-api-keys).'
       operationId: 'deleteKeys'
       parameters:
         - description: 'The hash identifier of the API key to delete'
@@ -35240,7 +35872,7 @@ paths:
         - 'API Keys'
       x-speakeasy-name-override: 'get'
     patch:
-      description: 'Update an existing API key. Authenticate with a [management key](/docs/guides/overview/auth/management-api-keys), or with a Connect client secret. A client secret reaches only the keys that same client created; any other key responds as if it does not exist.'
+      description: 'Update an existing API key. Authenticate with a [management key](/docs/guides/overview/auth/management-api-keys).'
       operationId: 'updateKeys'
       parameters:
         - description: 'The hash identifier of the API key to update'
@@ -35884,7 +36516,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 1000). When both offset and limit are omitted, the full list is returned'
           in: 'query'
           name: 'limit'
@@ -36497,7 +37128,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 1000). When both offset and limit are omitted, the full list is returned'
           in: 'query'
           name: 'limit'
@@ -36621,6 +37251,78 @@ paths:
       - $ref: "#/components/parameters/AppIdentifier"
       - $ref: "#/components/parameters/AppDisplayName"
       - $ref: "#/components/parameters/AppCategories"
+  /oauth/jwks:
+    get:
+      description: 'RFC 7517 JWK Set containing the public keys OpenRouter signs access tokens with.'
+      operationId: 'listOauthJwks'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthJwks'
+          description: 'JWK Set'
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerResponse'
+          description: 'Signing keys are not configured'
+      summary: 'OpenRouter access token signing keys'
+      tags:
+        - 'OAuth'
+    parameters:
+      - $ref: "#/components/parameters/AppIdentifier"
+      - $ref: "#/components/parameters/AppDisplayName"
+      - $ref: "#/components/parameters/AppCategories"
+  /oauth/token:
+    post:
+      description: 'RFC 8693 token exchange. Presents a JWT from an issuer your organization trusts (Settings → Workload identity) and receives a short-lived OpenRouter access token that acts as the API key the matching federation policy targets.'
+      operationId: 'createOauthToken'
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenExchangeRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenExchangeResponse'
+          description: 'Access token issued'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthErrorResponse'
+          description: 'Malformed request, unsupported grant, or the subject token was not accepted'
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthErrorResponse'
+          description: 'Rate limited'
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthErrorResponse'
+          description: 'The token could not be issued'
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthErrorResponse'
+          description: 'The issuer’s discovery document or JWKS could not be fetched'
+      summary: 'Exchange a workload identity token'
+      tags:
+        - 'OAuth'
+    parameters:
+      - $ref: "#/components/parameters/AppIdentifier"
+      - $ref: "#/components/parameters/AppDisplayName"
+      - $ref: "#/components/parameters/AppCategories"
   /observability/destinations:
     get:
       description: 'List the observability destinations configured for the authenticated entity''s default workspace. Use the `workspace_id` query parameter to scope the result to a different workspace. Only destinations with stable release status are surfaced — destinations of other types are excluded. [Management key](/docs/guides/overview/auth/management-api-keys) required.'
@@ -36638,7 +37340,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -36679,6 +37380,8 @@ paths:
                     id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
                     name: 'Production Langfuse'
                     privacy_mode: false
+                    regions:
+                      - 'global'
                     sampling_rate: 1
                     type: 'langfuse'
                     updated_at: '2025-08-24T15:45:00Z'
@@ -36768,6 +37471,8 @@ paths:
                   id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
                   name: 'Production Langfuse'
                   privacy_mode: false
+                  regions:
+                    - 'global'
                   sampling_rate: 1
                   type: 'langfuse'
                   updated_at: '2025-08-24T15:45:00Z'
@@ -36923,6 +37628,8 @@ paths:
                   id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
                   name: 'Production Langfuse'
                   privacy_mode: false
+                  regions:
+                    - 'global'
                   sampling_rate: 1
                   type: 'langfuse'
                   updated_at: '2025-08-24T15:45:00Z'
@@ -37006,6 +37713,8 @@ paths:
                   id: '99999999-aaaa-bbbb-cccc-dddddddddddd'
                   name: 'Production Langfuse'
                   privacy_mode: false
+                  regions:
+                    - 'global'
                   sampling_rate: 1
                   type: 'langfuse'
                   updated_at: '2025-08-24T15:45:00Z'
@@ -37077,6 +37786,169 @@ paths:
       - $ref: "#/components/parameters/AppIdentifier"
       - $ref: "#/components/parameters/AppDisplayName"
       - $ref: "#/components/parameters/AppCategories"
+  /organization:
+    post:
+      description: 'Create a customer organization owned by a managed user, named "[Parent] Customer". The creating call returns a management key for the new organization; a repeat call for the same customer returns the existing organization, and a key only when no usable key ever reached the caller. The organization is created unfunded: fund it before inference. A [management key](/docs/guides/overview/auth/management-api-keys) belonging to an organization with Connect enabled is required.'
+      operationId: 'createOrganization'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              properties:
+                email:
+                  description: 'Email address of the managed owner account created for the organization.'
+                  example: 'owner@acme.example'
+                  format: 'email'
+                  type: 'string'
+                name:
+                  description: 'The customer name. The organization is created as "[Parent] Customer", using the display name of the Connect-enabled organization holding the management key.'
+                  example: 'Acme Corp'
+                  maxLength: 256
+                  minLength: 1
+                  type: 'string'
+              required:
+                - 'name'
+                - 'email'
+              type: 'object'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                properties:
+                  created:
+                    type: 'boolean'
+                  grant:
+                    properties:
+                      id:
+                        type: 'string'
+                      scopes:
+                        items:
+                          enum:
+                            - 'inference'
+                            - 'workspaces_read'
+                            - 'workspaces_write'
+                            - 'keys_read'
+                            - 'keys_write'
+                            - 'guardrails_read'
+                            - 'guardrails_write'
+                            - 'observability_destinations_read'
+                            - 'observability_destinations_write'
+                            - 'organization_members_read'
+                          type: 'string'
+                          x-speakeasy-unknown-values: allow
+                        type: 'array'
+                    required:
+                      - 'id'
+                      - 'scopes'
+                    type: 'object'
+                  management_key:
+                    properties:
+                      key:
+                        description: 'Plaintext management key for the organization. Returned by the call that creates it, and by a repeat call only when no usable key was ever handed back — the organization holds none, or holds one whose plaintext was minted into a response the caller never received. A key that was delivered is never retrievable and is never replaced.'
+                        type: 'string'
+                      name:
+                        type: 'string'
+                    required:
+                      - 'name'
+                      - 'key'
+                    type:
+                      - 'object'
+                      - 'null'
+                  organization:
+                    properties:
+                      email:
+                        type: 'string'
+                      id:
+                        type: 'string'
+                      name:
+                        type: 'string'
+                      slug:
+                        type: 'string'
+                    required:
+                      - 'id'
+                      - 'name'
+                      - 'slug'
+                      - 'email'
+                    type: 'object'
+                required:
+                  - 'organization'
+                  - 'grant'
+                  - 'management_key'
+                  - 'created'
+                type: 'object'
+          description: 'Organization created or returned from an idempotent replay'
+        '400':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 400
+                  message: 'Invalid request parameters'
+              schema:
+                $ref: '#/components/schemas/BadRequestResponse'
+          description: 'Bad Request - Invalid request parameters or malformed input'
+        '401':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 401
+                  message: 'Missing Authentication header'
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+          description: 'Unauthorized - Authentication required or invalid credentials'
+        '403':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 403
+                  message: 'Only management keys can perform this operation'
+              schema:
+                $ref: '#/components/schemas/ForbiddenResponse'
+          description: 'Forbidden - Authentication successful but insufficient permissions'
+        '409':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 409
+                  message: 'Resource conflict. Please try again later.'
+              schema:
+                $ref: '#/components/schemas/ConflictResponse'
+          description: 'Conflict - Resource conflict or concurrent modification'
+        '429':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 429
+                  message: 'Rate limit exceeded'
+              schema:
+                $ref: '#/components/schemas/TooManyRequestsResponse'
+          description: 'Too Many Requests - Rate limit exceeded'
+        '500':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 500
+                  message: 'Internal Server Error'
+              schema:
+                $ref: '#/components/schemas/InternalServerResponse'
+          description: 'Internal Server Error - Unexpected server error'
+      summary: 'Create a customer organization'
+      tags:
+        - 'Organization'
+      x-speakeasy-group: 'orgs'
+      x-speakeasy-name-override: 'create'
+    parameters:
+      - $ref: "#/components/parameters/AppIdentifier"
+      - $ref: "#/components/parameters/AppDisplayName"
+      - $ref: "#/components/parameters/AppCategories"
   /organization/members:
     get:
       description: 'List all members of the organization associated with the authenticated management key. [Management key](/docs/guides/overview/auth/management-api-keys) required.'
@@ -37094,7 +37966,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -37235,7 +38106,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -37818,7 +38688,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -39195,7 +40064,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -39548,7 +40416,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -39612,6 +40479,118 @@ paths:
         outputs:
           results: '$.data'
         type: 'offsetLimit'
+    parameters:
+      - $ref: "#/components/parameters/AppIdentifier"
+      - $ref: "#/components/parameters/AppDisplayName"
+      - $ref: "#/components/parameters/AppCategories"
+  /scim/sync-jobs:
+    post:
+      description: 'Start a SCIM directory sync. [Management key](/docs/guides/overview/auth/management-api-keys) required.'
+      operationId: 'createScimSyncJob'
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateScimSyncJobResponse'
+          description: 'SCIM directory sync job queued'
+          headers:
+            Location:
+              description: 'Poll URL for the created sync job.'
+              required: true
+              schema:
+                description: 'Poll URL for the created sync job.'
+                type: 'string'
+        '401':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 401
+                  message: 'Missing Authentication header'
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+          description: 'Unauthorized - Authentication required or invalid credentials'
+        '404':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 404
+                  message: 'Resource not found'
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+          description: 'Not Found - Resource does not exist'
+        '500':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 500
+                  message: 'Internal Server Error'
+              schema:
+                $ref: '#/components/schemas/InternalServerResponse'
+          description: 'Internal Server Error - Unexpected server error'
+      summary: 'Start a SCIM directory sync'
+      tags:
+        - 'SCIM'
+      x-speakeasy-name-override: 'createSyncJob'
+    parameters:
+      - $ref: "#/components/parameters/AppIdentifier"
+      - $ref: "#/components/parameters/AppDisplayName"
+      - $ref: "#/components/parameters/AppCategories"
+  /scim/sync-jobs/{id}:
+    get:
+      description: 'Get SCIM directory sync status. [Management key](/docs/guides/overview/auth/management-api-keys) required.'
+      operationId: 'getScimSyncJob'
+      parameters:
+        - in: 'path'
+          name: 'id'
+          required: true
+          schema:
+            format: 'uuid'
+            type: 'string'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetScimSyncJobResponse'
+          description: 'SCIM directory sync job'
+        '401':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 401
+                  message: 'Missing Authentication header'
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+          description: 'Unauthorized - Authentication required or invalid credentials'
+        '404':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 404
+                  message: 'Resource not found'
+              schema:
+                $ref: '#/components/schemas/NotFoundResponse'
+          description: 'Not Found - Resource does not exist'
+        '500':
+          content:
+            application/json:
+              example:
+                error:
+                  code: 500
+                  message: 'Internal Server Error'
+              schema:
+                $ref: '#/components/schemas/InternalServerResponse'
+          description: 'Internal Server Error - Unexpected server error'
+      summary: 'Get SCIM directory sync status'
+      tags:
+        - 'SCIM'
+      x-speakeasy-name-override: 'getSyncJob'
     parameters:
       - $ref: "#/components/parameters/AppIdentifier"
       - $ref: "#/components/parameters/AppDisplayName"
@@ -39985,7 +40964,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -40759,7 +41737,6 @@ paths:
             type:
               - 'integer'
               - 'null'
-            nullable: false
         - description: 'Maximum number of records to return (max 100)'
           in: 'query'
           name: 'limit'
@@ -41101,8 +42078,7 @@ tags:
   - description: 'Workspaces endpoints'
     name: 'Workspaces'
   - name: beta.responses
-    deprecated: true
-    description: Deprecated alias for responses endpoints. Use responses instead. Scheduled for removal (sunset date TBD).
+    description: 'Deprecated alias of responses. Use responses instead; scheduled for removal (sunset date TBD).'
 x-retry-strategy:
   initialDelay: 500
   maxAttempts: 3

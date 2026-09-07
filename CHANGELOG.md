@@ -13,6 +13,72 @@ Upgrading from a 0.x release? See [UPGRADE.md](UPGRADE.md).
 
 Nothing yet.
 
+## [1.1.0] - 2026-09-07
+
+Restores full coverage after OpenRouter added five operations: 106 of 106. The
+weekly drift check caught them the same week they shipped.
+
+### Features
+
+- **Workload identity.** `$client->oauth()` covers RFC 8693 token exchange —
+  present a JWT from an issuer your organization trusts and receive a
+  short-lived OpenRouter access token, so a CI job or pod can authenticate with
+  its own identity instead of a long-lived API key. `TokenExchangeResponse`
+  adds `expiresAt()` and `isExpired()` because `expires_in` alone is awkward to
+  cache. `jwks()` returns the RFC 7517 signing keys, with `findKey($kid)` for
+  verifying a token locally.
+- **SCIM directory sync.** `$client->scim()->createSyncJob()` starts a sync and
+  `retrieveSyncJob()` polls it. `ScimSyncJobStatus` is an open enum:
+  an unrecognised status decodes to `Unknown` instead of throwing, keeps the
+  wire value on `$job->rawStatus`, and is deliberately **not** terminal so a
+  polling loop keeps waiting rather than exiting early.
+- **Customer organizations.** `$client->organization()->create()` creates a
+  customer organization for Connect-enabled organizations. The plaintext
+  management key is modelled as nullable, because it is returned only by the
+  call that mints it — a replay answers `created: false` and no key.
+- **Transport.** `Payload::form()` builds an `application/x-www-form-urlencoded`
+  body (`ContentType::FORM`), dropping null fields so optional parameters can be
+  passed unconditionally. It also takes `withoutAuthorization`, which omits the
+  `Authorization` header for endpoints that authenticate from the body —
+  `POST /oauth/token` presents its subject token there, so sending the API key
+  alongside would be meaningless.
+
+### Fixes
+
+- A POST with no fields now serialises as `{}` rather than `[]`. Only
+  `POST /scim/sync-jobs` currently sends an empty body, but `[]` is a JSON array
+  and no endpoint expecting an object would accept it.
+- RFC 6749 error payloads no longer lose their description. The OAuth endpoints
+  answer with `error` as a machine-readable code and the human-readable text in
+  a sibling `error_description`; the transporter used `error` as the exception
+  message and dropped the description, so a failed token exchange raised
+  `invalid_grant` instead of "The subject token was not accepted." The
+  description is now the message and the code is reachable via
+  `getErrorCode()`. Other endpoints, where `error` is already an object, are
+  unaffected.
+
+### BC breaks
+
+Additive for code that *uses* the SDK; breaking only for code that *implements*
+the interfaces.
+
+- `ClientContract` gained `oauth()`.
+- `ScimContract` gained `createSyncJob()` and `retrieveSyncJob()`.
+- `OrganizationContract` gained `create()`.
+
+### Stability policy
+
+The 1.0.0 entry below said the contract interfaces would not change before
+2.0.0. That is revised here, because holding it would mean either a major
+release per upstream endpoint batch or an SDK that falls behind the API.
+
+**Resource contracts may gain methods in minor releases.** They exist for type
+hinting, not as an extension point. To wrap the client, decorate
+`OpenRouter\Client` rather than implementing `ClientContract` — as
+[UPGRADE.md](UPGRADE.md#clientcontract) already recommended — and a decorator
+keeps absorbing new resources for free. Constructor signatures, method
+signatures and response shapes remain stable within 1.x.
+
 ## [1.0.1] - 2026-09-03
 
 No code changes — 1.0.1 exists so the guides ship inside the released package.
@@ -26,8 +92,11 @@ No code changes — 1.0.1 exists so the guides ship inside the released package.
 ## [1.0.0] - 2026-09-03
 
 Full coverage of the OpenRouter API: all 101 operations in the OpenAPI spec now have a
-typed wrapper, up from 38. The public API is declared stable — the contract interfaces
-will not change again before 2.0.0.
+typed wrapper, up from 38. The public API is declared stable.
+
+> This entry originally promised the contract interfaces would not change before
+> 2.0.0. That policy was revised in [1.1.0](#110---2026-09-07) — resource contracts
+> may gain methods in minor releases. Everything else remains stable within 1.x.
 
 ### Features
 
@@ -129,7 +198,8 @@ interfaces or calls the affected constructors positionally. See
 - Initial release: `chat()`, `models()` and `responses()`, with typed request and
   response value objects, SSE streaming and PSR-18 HTTP transport.
 
-[Unreleased]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/ClickAndMortar/openrouter-php-client/compare/v0.2.0...v0.3.0

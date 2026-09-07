@@ -53,7 +53,7 @@ echo $result->text();
 
 ## Endpoint coverage
 
-Every endpoint in the OpenRouter OpenAPI spec has a typed wrapper — 101 of 101 operations:
+Every endpoint in the OpenRouter OpenAPI spec has a typed wrapper — 106 of 106 operations:
 
 | Endpoint                                      | Method               | Status | SDK call                                                |
 |-----------------------------------------------|----------------------|:------:|---------------------------------------------------------|
@@ -114,6 +114,8 @@ Every endpoint in the OpenRouter OpenAPI spec has a typed wrapper — 101 of 101
 | `/scim/groups`                                | GET                  |   ✅    | `$client->scim()->listGroups(...)`                      |
 | `/scim/group-mappings`                        | GET / POST           |   ✅    | `$client->scim()->listGroupMappings(...)` / `createGroupMapping(...)` |
 | `/scim/group-mappings/{id}`                   | GET / PATCH / DELETE |   ✅    | `$client->scim()->retrieveGroupMapping($id)` / `updateGroupMapping(...)` / `deleteGroupMapping(...)` |
+| `/scim/sync-jobs`                             | POST                 |   ✅    | `$client->scim()->createSyncJob()`                      |
+| `/scim/sync-jobs/{id}`                        | GET                  |   ✅    | `$client->scim()->retrieveSyncJob($id)`                 |
 | `/generation`                                 | GET                  |   ✅    | `$client->generation()->retrieve($id)`                  |
 | `/activity`                                   | GET                  |   ✅    | `$client->activity()->list(...)`                        |
 | `/credits`                                    | GET                  |   ✅    | `$client->credits()->retrieve()`                        |
@@ -123,9 +125,12 @@ Every endpoint in the OpenRouter OpenAPI spec has a typed wrapper — 101 of 101
 | `/keys/{hash}`                                | GET / PATCH / DELETE |   ✅    | `$client->keys()->retrieve($hash)` / `update(...)` / `delete($hash)` |
 | `/auth/keys`                                  | POST                 |   ✅    | `$client->auth()->exchangeCode(...)`                    |
 | `/auth/keys/code`                             | POST                 |   ✅    | `$client->auth()->createAuthCode(...)`                  |
+| `/oauth/token`                                | POST                 |   ✅    | `$client->oauth()->exchangeToken(...)`                  |
+| `/oauth/jwks`                                 | GET                  |   ✅    | `$client->oauth()->jwks()`                              |
 | `/providers`                                  | GET                  |   ✅    | `$client->providers()->list()`                          |
 | `/endpoints/zdr`                              | GET                  |   ✅    | `$client->endpoints()->listZdr()`                       |
 | `/organization/members`                       | GET                  |   ✅    | `$client->organization()->listMembers(...)`             |
+| `/organization`                               | POST                 |   ✅    | `$client->organization()->create(...)`                  |
 | `/guardrails`                                 | GET / POST           |   ✅    | `$client->guardrails()->list(...)` / `create(...)`      |
 | `/guardrails/{id}`                            | GET / PATCH / DELETE |   ✅    | `$client->guardrails()->retrieve($id)` / `update(...)` / `delete($id)` |
 | `/guardrails/{id}/assignments/keys`           | GET / POST           |   ✅    | `$client->guardrails()->listKeyAssignments($id, ...)` / `bulkAssignKeys($id, $hashes)` |
@@ -886,6 +891,29 @@ $client->scim()->createGroupMapping(
 $client->scim()->deleteGroupMapping('sgm_1', keepMembers: true);
 ```
 
+### Directory sync jobs
+
+Trigger a sync of the IdP directory and poll it to completion. The job is queued asynchronously, so `createSyncJob()` returns immediately with a `queued` status:
+
+```php
+use OpenRouter\Enums\Scim\ScimSyncJobStatus;
+
+$job = $client->scim()->createSyncJob()->data;
+
+while (! $job->status->isTerminal()) {
+    sleep(2);
+    $job = $client->scim()->retrieveSyncJob($job->id)->data;
+}
+
+if ($job->status === ScimSyncJobStatus::Succeeded) {
+    echo "synced {$job->syncedGroups}, deleted {$job->deletedGroups}";
+} else {
+    echo $job->errorMessage;   // stable message describing the failure
+}
+```
+
+`status` is an open enum: a value OpenRouter adds later decodes to `ScimSyncJobStatus::Unknown` rather than throwing, and the wire value stays on `$job->rawStatus`. `Unknown` is deliberately not terminal, so the loop above keeps polling instead of exiting early.
+
 ## Analytics
 
 `meta()` first, to discover the valid metric and dimension identifiers rather than hardcoding them:
@@ -1045,6 +1073,35 @@ $exchange->key;     // sk-or-v1-...
 $exchange->userId;  // user_...
 ```
 
+## Workload identity (token exchange)
+
+RFC 8693 token exchange: present a JWT from an issuer your organization trusts (Settings → Workload identity) and receive a short-lived OpenRouter access token. This lets a CI job or a pod authenticate with its existing identity instead of a long-lived API key.
+
+```php
+use OpenRouter\ValueObjects\Oauth\TokenExchangeRequest;
+
+$token = $client->oauth()->exchangeToken(new TokenExchangeRequest(
+    subjectToken: $jwtFromYourIdp,
+    federationPolicyId: '4b2f7d1e-8c3a-4e5f-9a6b-1c2d3e4f5a6b',
+));
+
+$token->accessToken;   // send as Authorization: Bearer to the inference API
+$token->expiresIn;     // 900 — at most 15 minutes
+$token->expiresAt();   // absolute Unix time, for caching
+$token->isExpired(leewaySeconds: 30);
+```
+
+This call authenticates with the subject token, so the SDK deliberately omits the `Authorization` header — you can build the client without an API key when token exchange is all you need.
+
+Verify a token locally against OpenRouter's published signing keys:
+
+```php
+$jwks = $client->oauth()->jwks();
+
+$jwks->findKey('or-2026-09')?->alg;   // ES256
+$jwks->toArray();                     // hand straight to a JWT library
+```
+
 ## Organization members
 
 List members of the authenticated organization. Requires a management key. Supports offset/limit pagination (max `limit` = 100).
@@ -1058,6 +1115,21 @@ foreach ($members->data as $member) {
     echo "{$member->email} - {$member->role}".PHP_EOL;
 }
 ```
+
+### Creating a customer organization
+
+For Connect-enabled organizations: create a customer organization owned by a managed user. Requires a management key.
+
+```php
+$result = $client->organization()->create('Acme Corp', 'owner@acme.example');
+
+$result->created;                  // false on an idempotent replay
+$result->organization->slug;       // parent-acme-corp
+$result->grant->scopes;            // ['inference', 'keys_read', ...]
+$result->managementKey?->key;      // plaintext — returned once, store it now
+```
+
+The plaintext management key is handed back only by the call that mints it. A repeat call for the same customer returns the existing organization with `created` false and `managementKey` null, so treat a non-null key as a one-time value. The organization is created unfunded — fund it before running inference.
 
 ## Guardrails
 
