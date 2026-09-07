@@ -26,6 +26,7 @@ use OpenRouter\Resources\Keys;
 use OpenRouter\Resources\Messages;
 use OpenRouter\Resources\Models;
 use OpenRouter\Resources\Observability;
+use OpenRouter\Resources\Oauth;
 use OpenRouter\Resources\Organization;
 use OpenRouter\Resources\Presets;
 use OpenRouter\Resources\Providers;
@@ -124,6 +125,11 @@ final class Client implements ClientContract
     public function organization(): Organization
     {
         return new Organization($this->transporter);
+    }
+
+    public function oauth(): Oauth
+    {
+        return new Oauth($this->transporter);
     }
 
     public function audio(): Audio

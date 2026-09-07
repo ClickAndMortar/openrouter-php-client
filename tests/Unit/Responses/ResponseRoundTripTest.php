@@ -55,6 +55,10 @@ use OpenRouter\Responses\Workspaces\ListWorkspaceMembersResponse;
 use OpenRouter\Responses\Workspaces\ListWorkspacesResponse;
 use OpenRouter\Responses\Workspaces\WorkspaceResponse;
 use OpenRouter\Responses\Models\ListResponse;
+use OpenRouter\Responses\Oauth\JwksResponse;
+use OpenRouter\Responses\Oauth\TokenExchangeResponse;
+use OpenRouter\Responses\Organization\CreateOrganizationResponse;
+use OpenRouter\Responses\Scim\ScimSyncJobResponse;
 use OpenRouter\Responses\Organization\ListMembersResponse;
 use OpenRouter\Responses\Providers\ListProvidersResponse;
 use OpenRouter\Responses\Rerank\RerankResponse;
@@ -108,7 +112,10 @@ use OpenRouter\Tests\Fixtures\WorkspacesListFixture;
 use OpenRouter\Tests\Fixtures\ModelsListEndpointsFixture;
 use OpenRouter\Tests\Fixtures\ModelsListFixture;
 use OpenRouter\Tests\Fixtures\ModelsListForUserFixture;
+use OpenRouter\Tests\Fixtures\OauthFixture;
+use OpenRouter\Tests\Fixtures\OrganizationCreateFixture;
 use OpenRouter\Tests\Fixtures\OrganizationMembersFixture;
+use OpenRouter\Tests\Fixtures\ScimSyncJobFixture;
 use OpenRouter\Tests\Fixtures\ProvidersListFixture;
 use OpenRouter\Tests\Fixtures\RerankFixture;
 use OpenRouter\Tests\Fixtures\ResponsesCreateFixture;
@@ -183,6 +190,10 @@ final class ResponseRoundTripTest extends TestCase
         yield 'Models/ListEndpointsResponse' => [ListEndpointsResponse::class, ModelsListEndpointsFixture::ATTRIBUTES];
 
         yield 'Organization/ListMembersResponse' => [ListMembersResponse::class, OrganizationMembersFixture::ATTRIBUTES];
+        yield 'Organization/CreateOrganizationResponse' => [CreateOrganizationResponse::class, OrganizationCreateFixture::ATTRIBUTES];
+        yield 'Oauth/JwksResponse' => [JwksResponse::class, OauthFixture::JWKS];
+        yield 'Oauth/TokenExchangeResponse' => [TokenExchangeResponse::class, OauthFixture::TOKEN_EXCHANGE];
+        yield 'Scim/ScimSyncJobResponse' => [ScimSyncJobResponse::class, ScimSyncJobFixture::ATTRIBUTES];
         yield 'Providers/ListProvidersResponse' => [ListProvidersResponse::class, ProvidersListFixture::ATTRIBUTES];
         yield 'Rerank/RerankResponse' => [RerankResponse::class, RerankFixture::ATTRIBUTES];
 

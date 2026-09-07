@@ -10,6 +10,7 @@ use OpenRouter\Responses\Scim\DeleteScimGroupMappingResponse;
 use OpenRouter\Responses\Scim\ListScimGroupMappingsResponse;
 use OpenRouter\Responses\Scim\ListScimGroupsResponse;
 use OpenRouter\Responses\Scim\ScimGroupMappingResponse;
+use OpenRouter\Responses\Scim\ScimSyncJobResponse;
 use OpenRouter\ValueObjects\Transporter\Payload;
 
 final class Scim implements ScimContract
@@ -77,6 +78,35 @@ final class Scim implements ScimContract
         $data = $response->data();
 
         return DeleteScimGroupMappingResponse::from($data, $response->meta());
+    }
+
+    /**
+     * Starts a SCIM directory sync. The API queues the job and answers 202 with
+     * its initial state; poll {@see retrieveSyncJob()} until the status is
+     * terminal. Management key required.
+     */
+    public function createSyncJob(): ScimSyncJobResponse
+    {
+        return $this->syncJob(Payload::create('scim/sync-jobs', []));
+    }
+
+    /**
+     * Reads the current state of a sync job started by {@see createSyncJob()}.
+     * Management key required.
+     */
+    public function retrieveSyncJob(string $id): ScimSyncJobResponse
+    {
+        return $this->syncJob(Payload::retrieve('scim/sync-jobs', $id));
+    }
+
+    private function syncJob(Payload $payload): ScimSyncJobResponse
+    {
+        $response = $this->transporter->requestObject($payload);
+
+        /** @var array<string, mixed> $data */
+        $data = $response->data();
+
+        return ScimSyncJobResponse::from($data, $response->meta());
     }
 
     private function mapping(Payload $payload): ScimGroupMappingResponse

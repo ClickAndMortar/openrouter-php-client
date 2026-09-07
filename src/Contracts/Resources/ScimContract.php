@@ -9,6 +9,7 @@ use OpenRouter\Responses\Scim\DeleteScimGroupMappingResponse;
 use OpenRouter\Responses\Scim\ListScimGroupMappingsResponse;
 use OpenRouter\Responses\Scim\ListScimGroupsResponse;
 use OpenRouter\Responses\Scim\ScimGroupMappingResponse;
+use OpenRouter\Responses\Scim\ScimSyncJobResponse;
 
 interface ScimContract
 {
@@ -36,4 +37,15 @@ interface ScimContract
      * explicit, so it is always sent.
      */
     public function deleteGroupMapping(string $id, bool $keepMembers = false): DeleteScimGroupMappingResponse;
+
+    /**
+     * Starts a SCIM directory sync and returns the queued job. Management key
+     * required.
+     */
+    public function createSyncJob(): ScimSyncJobResponse;
+
+    /**
+     * Reads the current state of a sync job. Management key required.
+     */
+    public function retrieveSyncJob(string $id): ScimSyncJobResponse;
 }

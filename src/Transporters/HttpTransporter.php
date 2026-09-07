@@ -208,11 +208,11 @@ final class HttpTransporter implements TransporterContract
         }
 
         try {
-            /** @var array{error?: string|array{message: string|array<int, string>, type?: string, code?: string|int}} $data */
+            /** @var array{error?: string|array{message: string|array<int, string>, type?: string, code?: string|int}, error_description?: string} $data */
             $data = json_decode($contents, true, flags: JSON_THROW_ON_ERROR);
 
             if (isset($data['error'])) {
-                throw self::makeHttpException($data['error'], $response);
+                throw self::makeHttpException(self::normalizeError($data), $response);
             }
         } catch (JsonException $jsonException) {
             if (! str_contains($response->getHeaderLine('Content-Type'), ContentType::JSON->value)) {
@@ -221,6 +221,27 @@ final class HttpTransporter implements TransporterContract
 
             throw new UnserializableResponse($jsonException, $response);
         }
+    }
+
+    /**
+     * The OAuth endpoints answer in RFC 6749 §5.2 shape — `error` is a
+     * machine-readable code and the human-readable text lives in a sibling
+     * `error_description`. Everywhere else `error` is already an object. Fold
+     * the former into the latter so the description becomes the exception
+     * message and the code stays reachable via `getErrorCode()`.
+     *
+     * @param  array{error?: string|array{message: string|array<int, string>, type?: string, code?: string|int}, error_description?: string}  $data
+     * @return array{message?: string|array<int, string>, type?: ?string, code?: string|int|null, metadata?: array<string, mixed>}|string
+     */
+    private static function normalizeError(array $data): string|array
+    {
+        $error = $data['error'] ?? '';
+
+        if (is_string($error) && isset($data['error_description']) && is_string($data['error_description'])) {
+            return ['message' => $data['error_description'], 'code' => $error];
+        }
+
+        return $error;
     }
 
     /**

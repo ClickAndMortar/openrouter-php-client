@@ -23,6 +23,7 @@ use OpenRouter\Contracts\Resources\ImagesContract;
 use OpenRouter\Contracts\Resources\KeysContract;
 use OpenRouter\Contracts\Resources\MessagesContract;
 use OpenRouter\Contracts\Resources\ModelsContract;
+use OpenRouter\Contracts\Resources\OauthContract;
 use OpenRouter\Contracts\Resources\ObservabilityContract;
 use OpenRouter\Contracts\Resources\OrganizationContract;
 use OpenRouter\Contracts\Resources\PresetsContract;
@@ -89,6 +90,11 @@ interface ClientContract
      * SCIM groups synchronised from your IdP, and their workspace mappings.
      */
     public function scim(): ScimContract;
+
+    /**
+     * Workload-identity token exchange and the token signing keys.
+     */
+    public function oauth(): OauthContract;
 
     /**
      * Workspaces: scoped containers for keys, guardrails, budgets and members.
